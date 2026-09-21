@@ -721,9 +721,20 @@ app.post('/api/projects/:id/sync', (req, res) => {
 // before — whether or not anyone happens to be connected right now.
 const COLLAB_PATH = '/collab';
 
+// Guards against a duplication race: if the server process restarts while a
+// client still holds an open (or auto-reconnecting) connection, Hocuspocus
+// hands onLoadDocument a fresh, empty in-memory Document — seeding it from
+// disk while that client's own already-synced copy merges back in produces
+// two independent Yjs insertions of the same text, which the CRDT (correctly,
+// by its own rules) keeps as two copies instead of one. Seeding at most once
+// per project per server process lifetime closes that window.
+const seededFromDisk = new Set();
+
 const hocuspocus = new Hocuspocus({
   async onLoadDocument({ documentName, document }) {
     if (!isValidProjectId(documentName) || !fs.existsSync(projectDir(documentName))) return;
+    if (seededFromDisk.has(documentName)) return;
+    seededFromDisk.add(documentName);
     if (document.isEmpty('content')) {
       const texPath = mainFileAbs(documentName);
       const content = fs.existsSync(texPath) ? fs.readFileSync(texPath, 'utf8') : '';
@@ -732,9 +743,19 @@ const hocuspocus = new Hocuspocus({
   },
   async onStoreDocument({ documentName, document }) {
     if (!isValidProjectId(documentName) || !fs.existsSync(projectDir(documentName))) return;
+    const content = document.getText('content').toString();
+    // Defensive guard against the duplication race above (or any other future
+    // cause of the same symptom): a single main file should never contain
+    // \documentclass more than once. Refuse to persist obviously-corrupted
+    // content rather than overwriting a good file on disk with a bad one.
+    const documentclassCount = (content.match(/\\documentclass/g) || []).length;
+    if (documentclassCount > 1) {
+      console.error(`Recusando salvar ${documentName}: conteúdo parece duplicado (\\documentclass aparece ${documentclassCount}x).`);
+      return;
+    }
     const texPath = mainFileAbs(documentName);
     fs.mkdirSync(path.dirname(texPath), { recursive: true });
-    fs.writeFileSync(texPath, document.getText('content').toString(), 'utf8');
+    fs.writeFileSync(texPath, content, 'utf8');
     touchProject(documentName);
   },
 });

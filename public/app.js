@@ -560,6 +560,30 @@ function snippetFor(relPath) {
   return `\\input{${relPath}}`;
 }
 
+// Inserting at "the cursor" is only safe when the user actually just placed
+// it there by clicking into the editor. Clicking a sidebar file without
+// having focused the editor first left the cursor wherever it happened to
+// be (often line 0, i.e. before \documentclass) — insert at a safe spot
+// instead: just before \end{document}, or at the very end if there isn't
+// one yet.
+function insertSnippetSafely(snippet) {
+  if (cm.hasFocus()) {
+    cm.replaceSelection(snippet);
+    cm.focus();
+    return;
+  }
+  const lastLine = cm.lastLine();
+  let target = lastLine + 1;
+  for (let line = lastLine; line >= 0; line--) {
+    if (/\\end\{document\}/.test(cm.getLine(line))) {
+      target = line;
+      break;
+    }
+  }
+  cm.replaceRange(snippet + '\n', { line: target, ch: 0 });
+  cm.focus();
+}
+
 async function fetchFiles() {
   try {
     const res = await fetch(api('/files'));
@@ -684,8 +708,7 @@ function buildTreeNode(node) {
     row.title = 'Clique para inserir no editor';
 
     row.addEventListener('click', () => {
-      cm.replaceSelection(snippetFor(node.path));
-      cm.focus();
+      insertSnippetSafely(snippetFor(node.path));
     });
 
     li.appendChild(row);
