@@ -359,6 +359,9 @@ async function renderPageIfNeeded(info, token) {
     const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
     await info.page.render({ canvasContext: ctx, viewport: info.viewport, transform }).promise;
     if (token !== renderToken) return;
+    canvas.addEventListener('dblclick', (e) => {
+      jumpToSource(info.pageNum, e.offsetX / info.viewport.scale, e.offsetY / info.viewport.scale);
+    });
     info.wrapper.innerHTML = '';
     info.wrapper.appendChild(canvas);
     info.canvas = canvas;
@@ -373,6 +376,39 @@ function evictPage(info) {
   if (!info.canvas) return;
   info.wrapper.innerHTML = '';
   info.canvas = null;
+}
+
+// ------------------------------------------------------------------
+// PDF -> source sync (SyncTeX): double-click a spot in the preview to jump
+// the editor to that exact line, the same way Overleaf's preview does.
+// ------------------------------------------------------------------
+
+function flashLine(line) {
+  cm.addLineClass(line, 'background', 'sync-flash');
+  setTimeout(() => cm.removeLineClass(line, 'background', 'sync-flash'), 1200);
+}
+
+async function jumpToSource(page, x, y) {
+  try {
+    const res = await fetch(api('/sync'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page, x, y }),
+    });
+    const data = await res.json();
+    if (!data.success) return;
+    if (!data.isMainFile) {
+      setStatus(`Esse trecho está em ${data.file} — abra esse arquivo para editar.`, 'pending');
+      return;
+    }
+    const line = Math.max(0, data.line - 1);
+    cm.setCursor({ line, ch: 0 });
+    cm.scrollIntoView({ line, ch: 0 }, 100);
+    cm.focus();
+    flashLine(line);
+  } catch (err) {
+    console.error('Falha ao sincronizar PDF -> código', err);
+  }
 }
 
 zoomInBtn.addEventListener('click', () => {

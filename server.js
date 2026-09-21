@@ -7,9 +7,11 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const zlib = require('zlib');
 const { spawn } = require('child_process');
 const { Hocuspocus } = require('@hocuspocus/server');
 const nodeAdapter = require('crossws/adapters/node').default;
+const synctexParser = require('./lib/synctex-parser');
 
 const PORT = process.env.PORT || 4173;
 const ROOT_DIR = __dirname;
@@ -130,13 +132,20 @@ function outputDir(id) {
   return path.join(projectDir(id), '.output');
 }
 
-function pdfPath(id) {
+function outputBase(id) {
   // tectonic names its output after the input file's basename (thesis.tex ->
-  // thesis.pdf), not always "main.pdf" — matters once mainFile isn't
-  // literally main.tex (imported projects can have any entry-point name).
+  // thesis.pdf), not always "main" — matters once mainFile isn't literally
+  // main.tex (imported projects can have any entry-point name).
   const mainRel = getMainFileRel(id);
-  const base = path.basename(mainRel, path.extname(mainRel));
-  return path.join(outputDir(id), `${base}.pdf`);
+  return path.basename(mainRel, path.extname(mainRel));
+}
+
+function pdfPath(id) {
+  return path.join(outputDir(id), `${outputBase(id)}.pdf`);
+}
+
+function synctexPath(id) {
+  return path.join(outputDir(id), `${outputBase(id)}.synctex.gz`);
 }
 
 function metaPath(id) {
@@ -292,7 +301,7 @@ function runCompile(id, content) {
     // that \input/\includegraphics paths inside imported projects — which
     // may nest their main file in a subfolder — resolve exactly as the
     // original project intended.
-    const proc = spawn('tectonic', ['--outdir', outDir, texPath], {
+    const proc = spawn('tectonic', ['--synctex', '--outdir', outDir, texPath], {
       cwd: path.dirname(texPath),
     });
 
@@ -641,6 +650,68 @@ app.get('/api/projects/:id/output.pdf', (req, res) => {
   }
   res.set('Cache-Control', 'no-store');
   res.sendFile(file);
+});
+
+// Collects glyph-level SyncTeX records (leaf `elements`, recursing through
+// container `blocks`) — precise (x, y) -> source line hits. `includeBlocks`
+// is a coarser fallback for pages with little text (e.g. mostly a figure).
+function flattenSyncTex(node, acc, includeBlocks) {
+  if (!node) return;
+  (node.elements || []).forEach((e) => {
+    if (e.line != null && e.left != null && e.bottom != null) {
+      acc.push({ line: e.line, fileName: e.file && e.file.name, left: e.left, bottom: e.bottom });
+    }
+  });
+  if (includeBlocks && node.line != null && node.left != null && node.bottom != null) {
+    acc.push({ line: node.line, fileName: node.file && node.file.name, left: node.left, bottom: node.bottom });
+  }
+  (node.blocks || []).forEach((b) => flattenSyncTex(b, acc, includeBlocks));
+}
+
+app.post('/api/projects/:id/sync', (req, res) => {
+  const { page, x, y } = req.body || {};
+  const file = synctexPath(req.params.id);
+  if (typeof page !== 'number' || typeof x !== 'number' || typeof y !== 'number') {
+    return res.status(400).json({ success: false, error: 'Parâmetros inválidos.' });
+  }
+  if (!fs.existsSync(file)) {
+    return res.status(404).json({ success: false, error: 'SyncTeX não disponível — compile o projeto de novo.' });
+  }
+  try {
+    const text = zlib.gunzipSync(fs.readFileSync(file)).toString('utf8');
+    const parsed = synctexParser.parseSyncTex(text);
+    const pageData = parsed.pages[page];
+    if (!pageData) return res.json({ success: false });
+
+    let elements = [];
+    (pageData.blocks || []).forEach((b) => flattenSyncTex(b, elements, false));
+    if (elements.length === 0) {
+      (pageData.blocks || []).forEach((b) => flattenSyncTex(b, elements, true));
+    }
+    if (elements.length === 0) return res.json({ success: false });
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const el of elements) {
+      const dx = el.left - x;
+      const dy = el.bottom - y;
+      const dist = dx * dx + dy * dy;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = el;
+      }
+    }
+
+    const mainBase = path.basename(getMainFileRel(req.params.id));
+    res.json({
+      success: true,
+      file: best.fileName,
+      line: best.line,
+      isMainFile: best.fileName === mainBase,
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
 });
 
 // --- Real-time collaborative editing (Yjs via Hocuspocus) -------------------

@@ -783,3 +783,11 @@ button, input {
 .project-card-actions .tree-action:hover {
   color: var(--urucum);
 }
+
+.CodeMirror .sync-flash {
+  background: rgba(240, 78, 68, 0.25);
+}
+
+.pdf-page canvas {
+  cursor: text;
+}

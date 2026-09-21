@@ -22,6 +22,7 @@ cleanup() {
   echo "Encerrando..."
   kill "$SERVER_PID" 2>/dev/null || true
   kill "$TUNNEL_PID" 2>/dev/null || true
+  rm -f tunnel-url.txt
 }
 trap cleanup EXIT
 
@@ -43,12 +44,12 @@ echo
 echo "========================================================"
 if [ -n "$URL" ]; then
   echo "Link para compartilhar: $URL"
+  echo "$URL" > tunnel-url.txt
 else
   echo "Não consegui capturar o link ainda — veja $TUNNEL_LOG"
 fi
 echo "Senha de acesso:        $SITE_PASSWORD"
 echo "========================================================"
-echo "Deixe este terminal aberto. Ctrl+C para encerrar."
 echo
 
 wait "$SERVER_PID" "$TUNNEL_PID"
