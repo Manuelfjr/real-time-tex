@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LaTeX Live</title>
+<link rel="icon" type="image/png" href="assets/kunumi-mark.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="assets/kunumi-mark.png" alt="" class="brand-mark" />
+      <span class="brand-name">LaTeX Live</span>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <div class="dashboard-header">
+      <h1>Seus projetos</h1>
+      <div class="dashboard-actions">
+        <button type="button" id="new-project-btn" class="btn btn-primary">+ Novo projeto</button>
+        <label for="zip-input" class="btn btn-secondary-light">Importar .zip</label>
+        <input type="file" id="zip-input" accept=".zip,application/zip" hidden />
+      </div>
+    </div>
+
+    <div class="import-status hidden" id="import-status"></div>
+
+    <div class="project-grid" id="project-grid">
+      <p class="dashboard-empty">Carregando projetos…</p>
+    </div>
+  </main>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

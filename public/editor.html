@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LaTeX Live</title>
+<link rel="icon" type="image/png" href="assets/kunumi-mark.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="topbar-brand" title="Voltar para os projetos">
+      <img src="assets/kunumi-mark.png" alt="" class="brand-mark" />
+      <span class="brand-name">LaTeX Live</span>
+    </a>
+
+    <span class="topbar-sep">/</span>
+    <input
+      type="text"
+      id="project-name"
+      class="project-name-input"
+      placeholder="Nome do projeto"
+      spellcheck="false"
+      title="Clique para renomear o projeto"
+    />
+
+    <div class="status" id="status">Carregando…</div>
+
+    <label class="autocompile-toggle" title="Compilar automaticamente a cada edição">
+      <input type="checkbox" id="autocompile-checkbox" checked />
+      <span class="switch"></span>
+      <span class="switch-label">Autocompilar</span>
+    </label>
+
+    <button id="compile-btn" class="btn btn-primary">Compilar agora</button>
+    <a id="download-link" class="btn btn-secondary" href="#" download="documento.pdf">Baixar PDF</a>
+  </header>
+
+  <main class="workspace">
+    <aside class="file-sidebar" id="file-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Arquivos do projeto</div>
+        <div class="sidebar-actions">
+          <button type="button" class="upload-btn" id="new-folder-btn" title="Criar pasta">+ Pasta</button>
+          <label class="upload-btn" for="file-input" id="upload-root-btn">+ Upload</label>
+        </div>
+        <input type="file" id="file-input" multiple hidden />
+      </div>
+      <ul class="file-list" id="file-list">
+        <li class="file-empty">Nenhum arquivo ainda</li>
+      </ul>
+      <p class="sidebar-hint">
+        Clique num arquivo para inserir o comando LaTeX correspondente no cursor. Use ✎ para renomear
+        e ✕ para excluir. Pastas podem ser criadas com caminhos como "imagens/graficos".
+      </p>
+    </aside>
+
+    <div class="split-area" id="split-area">
+      <section class="pane editor-pane">
+        <textarea id="editor"></textarea>
+      </section>
+
+      <div class="divider" id="divider"></div>
+
+      <section class="pane preview-pane">
+        <div class="preview-toolbar">
+          <button id="zoom-out" class="zoom-btn" title="Diminuir zoom">−</button>
+          <button id="zoom-fit" class="zoom-btn zoom-fit" title="Ajustar à largura">Ajustar à largura</button>
+          <button id="zoom-in" class="zoom-btn" title="Aumentar zoom">+</button>
+        </div>
+        <div class="preview-container">
+          <div id="pdf-viewer" class="pdf-viewer">
+            <div class="pdf-placeholder" id="pdf-placeholder">Compilando o primeiro PDF…</div>
+          </div>
+          <div class="page-indicator hidden" id="page-indicator">1 / 1</div>
+        </div>
+        <div class="log-panel collapsed" id="log-panel">
+          <div class="log-header" id="log-header">
+            <span>Log de compilação</span>
+            <span class="log-toggle">▾</span>
+          </div>
+          <pre id="log-content" class="log-content"></pre>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+\section{Metodologia}
+\label{sec:metodologia}
+
+Os parâmetros $\beta_0$ e $\beta_1$ da Equação~\eqref{eq:regressao} podem
+ser estimados pelo método dos mínimos quadrados, que minimiza a soma dos
+quadrados dos resíduos:
+\begin{equation}
+    \hat{\boldsymbol{\beta}} =
+        \left( \mathbf{X}^{\top} \mathbf{X} \right)^{-1}
+        \mathbf{X}^{\top} \mathbf{y},
+    \label{eq:minimos-quadrados}
+\end{equation}
+em que $\mathbf{X}$ é a matriz de variáveis explicativas e $\mathbf{y}$ é
+o vetor de observações da variável resposta.
+
+A Tabela~\ref{tab:configuracoes} resume as configurações usadas nos
+experimentos.
+
+\begin{table}[h]
+    \centering
+    \caption{Configurações utilizadas nos experimentos}
+    \label{tab:configuracoes}
+    \begin{tabular}{lcc}
+        \toprule
+        Experimento & Tamanho da amostra ($n$) & Variância do erro ($\sigma^2$) \\
+        \midrule
+        E1 & 40  & 1.0 \\
+        E2 & 100 & 2.5 \\
+        E3 & 400 & 4.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}

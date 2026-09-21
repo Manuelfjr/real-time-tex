@@ -1,0 +1,689 @@
+import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs';
+
+const PROJECT_ID = new URLSearchParams(location.search).get('id');
+if (!PROJECT_ID) {
+  location.href = 'index.html';
+  throw new Error('Nenhum projeto selecionado.');
+}
+const api = (p) => `/api/projects/${encodeURIComponent(PROJECT_ID)}${p}`;
+
+const DEBOUNCE_MS = 700;
+
+const statusEl = document.getElementById('status');
+const compileBtn = document.getElementById('compile-btn');
+const pdfViewerEl = document.getElementById('pdf-viewer');
+const pdfPlaceholder = document.getElementById('pdf-placeholder');
+const pageIndicator = document.getElementById('page-indicator');
+const logPanel = document.getElementById('log-panel');
+const logHeader = document.getElementById('log-header');
+const logContent = document.getElementById('log-content');
+const zoomInBtn = document.getElementById('zoom-in');
+const zoomOutBtn = document.getElementById('zoom-out');
+const zoomFitBtn = document.getElementById('zoom-fit');
+const fileListEl = document.getElementById('file-list');
+const fileInput = document.getElementById('file-input');
+const fileSidebar = document.getElementById('file-sidebar');
+const autocompileCheckbox = document.getElementById('autocompile-checkbox');
+const downloadLink = document.getElementById('download-link');
+
+let pdfLoaded = false;
+let debounceTimer = null;
+let dirty = false;
+
+const cm = CodeMirror.fromTextArea(document.getElementById('editor'), {
+  mode: 'stex',
+  theme: 'material-darker',
+  lineNumbers: true,
+  lineWrapping: true,
+  tabSize: 2,
+  indentUnit: 2,
+  autofocus: true,
+});
+
+// ------------------------------------------------------------------
+// Autocompile toggle: when off, edits only mark the doc as dirty and
+// compilation happens solely via the "Compilar agora" button.
+// ------------------------------------------------------------------
+
+const AUTOCOMPILE_STORAGE_KEY = 'latex-live:autocompile';
+let autoCompile = true;
+try {
+  const saved = localStorage.getItem(AUTOCOMPILE_STORAGE_KEY);
+  if (saved !== null) autoCompile = saved === 'true';
+} catch (err) {
+  // localStorage unavailable (private mode, etc.) — keep default
+}
+autocompileCheckbox.checked = autoCompile;
+
+autocompileCheckbox.addEventListener('change', () => {
+  autoCompile = autocompileCheckbox.checked;
+  try {
+    localStorage.setItem(AUTOCOMPILE_STORAGE_KEY, String(autoCompile));
+  } catch (err) {
+    // ignore
+  }
+  if (autoCompile && dirty) {
+    clearTimeout(debounceTimer);
+    compile();
+  }
+});
+
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+async function loadDocument() {
+  try {
+    const res = await fetch(api('/document'));
+    const data = await res.json();
+    cm.setValue(data.content || '');
+    compile();
+  } catch (err) {
+    setStatus('Não foi possível carregar o documento.', 'error');
+  }
+}
+
+async function compile() {
+  dirty = false;
+  setStatus('Compilando…');
+  compileBtn.disabled = true;
+  try {
+    const res = await fetch(api('/compile'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: cm.getValue() }),
+    });
+    const result = await res.json();
+    await handleCompileResult(result);
+  } catch (err) {
+    setStatus('Erro ao conectar com o servidor.', 'error');
+    logPanel.classList.add('has-error');
+    logPanel.classList.remove('collapsed');
+    logContent.textContent = String(err);
+  } finally {
+    compileBtn.disabled = false;
+  }
+}
+
+async function handleCompileResult(result) {
+  logContent.textContent = result.log || '';
+
+  if (result.success) {
+    try {
+      await renderPdf(api('/output.pdf') + '?t=' + Date.now());
+      pdfLoaded = true;
+      pdfPlaceholder.classList.add('hidden');
+      pageIndicator.classList.remove('hidden');
+      setStatus('Compilado ✓', 'ok');
+      logPanel.classList.remove('has-error');
+      logPanel.classList.add('collapsed');
+    } catch (err) {
+      setStatus('PDF gerado, mas falhou ao exibir ✗', 'error');
+      logPanel.classList.add('has-error');
+      logPanel.classList.remove('collapsed');
+      logContent.textContent = (result.log || '') + '\n\n[Erro ao renderizar o PDF no navegador]\n' + err;
+    }
+  } else {
+    setStatus('Erro de compilação ✗', 'error');
+    logPanel.classList.add('has-error');
+    logPanel.classList.remove('collapsed');
+    if (!pdfLoaded) {
+      pdfPlaceholder.textContent = 'Erro na primeira compilação — veja o log abaixo.';
+    }
+  }
+}
+
+function scheduleCompile() {
+  dirty = true;
+  if (!autoCompile) {
+    setStatus('Alterações pendentes — clique em "Compilar agora"', 'pending');
+    return;
+  }
+  setStatus('Editando…');
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(compile, DEBOUNCE_MS);
+}
+
+cm.on('change', scheduleCompile);
+compileBtn.addEventListener('click', () => {
+  clearTimeout(debounceTimer);
+  compile();
+});
+
+logHeader.addEventListener('click', () => {
+  logPanel.classList.toggle('collapsed');
+});
+
+// ------------------------------------------------------------------
+// PDF rendering (PDF.js onto <canvas>, continuous scroll, no native
+// browser PDF chrome — mirrors Overleaf's preview instead of an iframe).
+//
+// Virtualized like PDF.js's own viewer: only pages within RENDER_MARGIN_PX
+// of the visible area get an actual <canvas>; pages that scroll further
+// away are evicted back to an empty (but correctly-sized, so scrolling
+// never jumps) placeholder. A heavy thesis with hundreds of image-filled
+// pages would otherwise hold every page's full-resolution canvas in memory
+// at once, which is enough to stall or crash the tab.
+// ------------------------------------------------------------------
+
+const RENDER_MARGIN_PX = 1500;
+
+let currentPdfDoc = null;
+let zoomMode = 'fit'; // 'fit' | 'manual'
+let manualScale = 1.2;
+let lastScale = 1;
+let renderToken = 0;
+let pageEntries = []; // { pageNum, page, viewport, wrapper, canvas, rendering }
+let renderObserver = null;
+let visibleObserver = null;
+
+async function renderPdf(url) {
+  const token = ++renderToken;
+  // Pass the URL straight through so PDF.js streams it (HTTP range
+  // requests, which Express's static/sendFile already support) instead of
+  // buffering the whole file in memory before it can show a single page.
+  const pdf = await pdfjsLib.getDocument({ url }).promise;
+  if (token !== renderToken) return;
+  currentPdfDoc = pdf;
+  await rebuildVirtualPages(token);
+}
+
+async function rebuildVirtualPages(token) {
+  if (!currentPdfDoc) return;
+  if (token === undefined) token = ++renderToken;
+
+  if (renderObserver) renderObserver.disconnect();
+  if (visibleObserver) visibleObserver.disconnect();
+  pageEntries = [];
+  pdfViewerEl.innerHTML = '';
+
+  const containerWidth = pdfViewerEl.clientWidth - 32;
+  const fragment = document.createDocumentFragment();
+
+  for (let pageNum = 1; pageNum <= currentPdfDoc.numPages; pageNum++) {
+    // getPage()/getViewport() only read page metadata — cheap, no pixels
+    // are rendered here, so this loop stays fast even for huge documents.
+    const page = await currentPdfDoc.getPage(pageNum);
+    if (token !== renderToken) return;
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = zoomMode === 'fit' ? containerWidth / baseViewport.width : manualScale;
+    if (pageNum === 1) lastScale = scale;
+    const viewport = page.getViewport({ scale });
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pdf-page';
+    wrapper.dataset.pageNumber = String(pageNum);
+    wrapper.style.width = Math.floor(viewport.width) + 'px';
+    wrapper.style.height = Math.floor(viewport.height) + 'px';
+
+    fragment.appendChild(wrapper);
+    pageEntries.push({ pageNum, page, viewport, wrapper, canvas: null, rendering: false });
+  }
+
+  if (token !== renderToken) return;
+  pdfViewerEl.appendChild(fragment);
+  setupPageObservers(token);
+}
+
+function setupPageObservers(token) {
+  const total = currentPdfDoc.numPages;
+  pageIndicator.textContent = `1 / ${total}`;
+
+  // Renders pages as they approach the viewport and evicts their canvas
+  // (freeing its pixel memory) once they scroll well past it.
+  renderObserver = new IntersectionObserver(
+    (entries) => {
+      if (token !== renderToken) return;
+      for (const entry of entries) {
+        const info = pageEntries[Number(entry.target.dataset.pageNumber) - 1];
+        if (!info) continue;
+        if (entry.isIntersecting) {
+          renderPageIfNeeded(info, token);
+        } else {
+          evictPage(info);
+        }
+      }
+    },
+    { root: pdfViewerEl, rootMargin: `${RENDER_MARGIN_PX}px 0px` }
+  );
+
+  // Tracks which page is actually on screen for the page-indicator badge,
+  // independent of the expanded render margin above.
+  visibleObserver = new IntersectionObserver(
+    (entries) => {
+      let best = null;
+      for (const entry of entries) {
+        if (entry.isIntersecting && (!best || entry.intersectionRatio > best.intersectionRatio)) {
+          best = entry;
+        }
+      }
+      if (best) {
+        pageIndicator.textContent = `${best.target.dataset.pageNumber} / ${total}`;
+      }
+    },
+    { root: pdfViewerEl, threshold: [0.1, 0.25, 0.5, 0.75, 1] }
+  );
+
+  for (const info of pageEntries) {
+    renderObserver.observe(info.wrapper);
+    visibleObserver.observe(info.wrapper);
+  }
+}
+
+async function renderPageIfNeeded(info, token) {
+  if (info.canvas || info.rendering) return;
+  info.rendering = true;
+  try {
+    // Cap the resolution multiplier: on a 3x-DPI display a naive canvas
+    // would be 9x the pixel count of a 1x canvas for no visible benefit.
+    const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(info.viewport.width * outputScale);
+    canvas.height = Math.floor(info.viewport.height * outputScale);
+    const ctx = canvas.getContext('2d');
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
+    await info.page.render({ canvasContext: ctx, viewport: info.viewport, transform }).promise;
+    if (token !== renderToken) return;
+    info.wrapper.innerHTML = '';
+    info.wrapper.appendChild(canvas);
+    info.canvas = canvas;
+  } catch (err) {
+    console.error(`Falha ao renderizar a página ${info.pageNum}`, err);
+  } finally {
+    info.rendering = false;
+  }
+}
+
+function evictPage(info) {
+  if (!info.canvas) return;
+  info.wrapper.innerHTML = '';
+  info.canvas = null;
+}
+
+zoomInBtn.addEventListener('click', () => {
+  zoomMode = 'manual';
+  manualScale = Math.min(4, lastScale * 1.15);
+  rebuildVirtualPages().catch((err) => console.error('Falha ao aplicar zoom', err));
+});
+
+zoomOutBtn.addEventListener('click', () => {
+  zoomMode = 'manual';
+  manualScale = Math.max(0.3, lastScale / 1.15);
+  rebuildVirtualPages().catch((err) => console.error('Falha ao aplicar zoom', err));
+});
+
+zoomFitBtn.addEventListener('click', () => {
+  zoomMode = 'fit';
+  rebuildVirtualPages().catch((err) => console.error('Falha ao ajustar zoom', err));
+});
+
+let resizeTimer = null;
+new ResizeObserver(() => {
+  if (zoomMode !== 'fit' || !currentPdfDoc) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    rebuildVirtualPages().catch((err) => console.error('Falha ao redimensionar preview', err));
+  }, 120);
+}).observe(document.querySelector('.preview-container'));
+
+// ------------------------------------------------------------------
+// Resizable split between editor and preview
+// ------------------------------------------------------------------
+
+const divider = document.getElementById('divider');
+const editorPane = document.querySelector('.editor-pane');
+const previewPane = document.querySelector('.preview-pane');
+const splitArea = document.getElementById('split-area');
+
+let dragging = false;
+divider.addEventListener('mousedown', () => {
+  dragging = true;
+  document.body.style.cursor = 'col-resize';
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  const rect = splitArea.getBoundingClientRect();
+  const pct = Math.min(80, Math.max(20, ((e.clientX - rect.left) / rect.width) * 100));
+  editorPane.style.flex = `0 0 ${pct}%`;
+  previewPane.style.flex = `0 0 ${100 - pct}%`;
+});
+window.addEventListener('mouseup', () => {
+  if (dragging) {
+    dragging = false;
+    document.body.style.cursor = '';
+    cm.refresh();
+  }
+});
+
+// ------------------------------------------------------------------
+// Project name: shown in the topbar, persisted server-side, and used
+// as the downloaded PDF's filename.
+// ------------------------------------------------------------------
+
+const projectNameInput = document.getElementById('project-name');
+
+function slugifyForFilename(name) {
+  return (
+    (name || 'documento')
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, '-')
+      .slice(0, 80) || 'documento'
+  );
+}
+
+function applyProjectName(name) {
+  projectNameInput.value = name;
+  document.title = name ? `${name} — LaTeX Live` : 'LaTeX Live';
+  downloadLink.href = api('/output.pdf');
+  downloadLink.download = slugifyForFilename(name) + '.pdf';
+}
+
+async function loadProjectName() {
+  try {
+    const res = await fetch(api(''));
+    const data = await res.json();
+    applyProjectName(data.name || '');
+  } catch (err) {
+    // keep the placeholder if this fails — non-critical
+  }
+}
+
+async function saveProjectName() {
+  const name = projectNameInput.value.trim() || 'Documento sem título';
+  applyProjectName(name);
+  try {
+    await fetch(api(''), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+  } catch (err) {
+    console.error('Falha ao salvar nome do projeto', err);
+  }
+}
+
+projectNameInput.addEventListener('blur', saveProjectName);
+projectNameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    projectNameInput.blur();
+  }
+});
+
+// ------------------------------------------------------------------
+// Project files sidebar: a folder tree for images, .bib, chapter .tex
+// files and the like. Clicking a file inserts the matching LaTeX
+// snippet at the cursor; folders can be created, and both files and
+// folders can be renamed or deleted.
+// ------------------------------------------------------------------
+
+const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
+let pendingUploadFolder = '';
+
+function extOf(name) {
+  const parts = name.split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+}
+
+function iconFor(name) {
+  const ext = extOf(name);
+  if (IMAGE_EXT.includes(ext)) return '🖼️';
+  if (ext === 'pdf') return '📄';
+  if (ext === 'bib') return '📚';
+  if (ext === 'tex') return '📝';
+  if (ext === 'cls' || ext === 'sty') return '🧩';
+  return '📎';
+}
+
+function snippetFor(relPath) {
+  const ext = extOf(relPath);
+  if (IMAGE_EXT.includes(ext) || ext === 'pdf' || ext === 'eps') {
+    return `\\includegraphics[width=0.8\\linewidth]{${relPath}}`;
+  }
+  if (ext === 'bib') {
+    return `\\bibliography{${relPath.replace(/\.bib$/i, '')}}`;
+  }
+  if (ext === 'cls' || ext === 'sty') {
+    return `% ${relPath} disponível no projeto`;
+  }
+  return `\\input{${relPath}}`;
+}
+
+async function fetchFiles() {
+  try {
+    const res = await fetch(api('/files'));
+    const data = await res.json();
+    renderFileTree(data.tree || []);
+  } catch (err) {
+    fileListEl.innerHTML = '<li class="file-empty">Erro ao listar arquivos</li>';
+  }
+}
+
+function renderFileTree(tree) {
+  fileListEl.innerHTML = '';
+  if (tree.length === 0) {
+    fileListEl.innerHTML = '<li class="file-empty">Nenhum arquivo ainda</li>';
+    return;
+  }
+  for (const node of tree) {
+    fileListEl.appendChild(buildTreeNode(node));
+  }
+}
+
+function buildTreeNode(node) {
+  const li = document.createElement('li');
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+
+  const del = document.createElement('span');
+  del.className = 'tree-action';
+  del.textContent = '✕';
+  del.title = node.type === 'folder' ? 'Excluir pasta' : 'Excluir arquivo';
+  del.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteItem(node);
+  });
+
+  const rename = document.createElement('span');
+  rename.className = 'tree-action';
+  rename.textContent = '✎';
+  rename.title = 'Renomear';
+  rename.addEventListener('click', (e) => {
+    e.stopPropagation();
+    renameItem(node);
+  });
+
+  const actions = document.createElement('span');
+  actions.className = 'tree-actions';
+
+  if (node.type === 'folder') {
+    li.className = 'tree-folder';
+
+    const caret = document.createElement('span');
+    caret.className = 'folder-caret';
+    caret.textContent = '▾';
+
+    const icon = document.createElement('span');
+    icon.className = 'file-icon';
+    icon.textContent = '📁';
+
+    const name = document.createElement('span');
+    name.className = 'file-name';
+    name.textContent = node.name;
+
+    const addBtn = document.createElement('span');
+    addBtn.className = 'tree-action';
+    addBtn.textContent = '+';
+    addBtn.title = 'Adicionar arquivo nesta pasta';
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pendingUploadFolder = node.path;
+      fileInput.click();
+    });
+
+    actions.appendChild(addBtn);
+    actions.appendChild(rename);
+    actions.appendChild(del);
+
+    row.appendChild(caret);
+    row.appendChild(icon);
+    row.appendChild(name);
+    row.appendChild(actions);
+    row.title = node.name;
+
+    row.addEventListener('click', () => li.classList.toggle('collapsed'));
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      row.classList.remove('drag-over');
+      uploadFiles(e.dataTransfer.files, node.path);
+    });
+
+    li.appendChild(row);
+
+    const children = document.createElement('ul');
+    children.className = 'tree-children';
+    for (const child of node.children) {
+      children.appendChild(buildTreeNode(child));
+    }
+    li.appendChild(children);
+  } else {
+    li.className = 'tree-file';
+
+    const icon = document.createElement('span');
+    icon.className = 'file-icon';
+    icon.textContent = iconFor(node.name);
+
+    const name = document.createElement('span');
+    name.className = 'file-name';
+    name.textContent = node.name;
+
+    actions.appendChild(rename);
+    actions.appendChild(del);
+
+    row.appendChild(icon);
+    row.appendChild(name);
+    row.appendChild(actions);
+    row.title = 'Clique para inserir no editor';
+
+    row.addEventListener('click', () => {
+      cm.replaceSelection(snippetFor(node.path));
+      cm.focus();
+    });
+
+    li.appendChild(row);
+  }
+
+  return li;
+}
+
+async function uploadFiles(fileListLike, folder) {
+  const files = Array.from(fileListLike || []);
+  if (files.length === 0) return;
+  const formData = new FormData();
+  // "folder" must be appended before the files: multer/busboy populate
+  // req.body as the multipart stream is parsed, in order.
+  formData.append('folder', folder || '');
+  files.forEach((f) => formData.append('files', f));
+  try {
+    const res = await fetch(api('/files'), { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!data.success) {
+      alert('Falha no upload: ' + (data.error || 'erro desconhecido'));
+    }
+  } catch (err) {
+    alert('Falha no upload: ' + err.message);
+  } finally {
+    fetchFiles();
+  }
+}
+
+async function deleteItem(node) {
+  const label = node.type === 'folder' ? `a pasta "${node.name}" e todo o seu conteúdo` : `"${node.name}"`;
+  if (!confirm(`Remover ${label}?`)) return;
+  try {
+    await fetch(api('/delete'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: node.path }),
+    });
+  } finally {
+    fetchFiles();
+  }
+}
+
+async function renameItem(node) {
+  const newName = prompt('Novo nome:', node.name);
+  if (!newName || newName === node.name) return;
+  try {
+    const res = await fetch(api('/rename'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: node.path, newName }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert('Falha ao renomear: ' + (data.error || 'erro desconhecido'));
+    }
+  } finally {
+    fetchFiles();
+  }
+}
+
+async function createFolder() {
+  const name = prompt('Nome da nova pasta (ex.: imagens ou imagens/graficos):');
+  if (!name) return;
+  try {
+    const res = await fetch(api('/folders'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: name }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert('Falha ao criar pasta: ' + (data.error || 'erro desconhecido'));
+    }
+  } finally {
+    fetchFiles();
+  }
+}
+
+fileInput.addEventListener('change', () => {
+  uploadFiles(fileInput.files, pendingUploadFolder);
+  fileInput.value = '';
+  pendingUploadFolder = '';
+});
+
+document.getElementById('upload-root-btn').addEventListener('click', () => {
+  pendingUploadFolder = '';
+});
+
+document.getElementById('new-folder-btn').addEventListener('click', createFolder);
+
+fileSidebar.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  fileSidebar.classList.add('drag-over');
+});
+fileSidebar.addEventListener('dragleave', () => {
+  fileSidebar.classList.remove('drag-over');
+});
+fileSidebar.addEventListener('drop', (e) => {
+  e.preventDefault();
+  fileSidebar.classList.remove('drag-over');
+  uploadFiles(e.dataTransfer.files, '');
+});
+
+logPanel.classList.add('collapsed');
+loadDocument();
+loadProjectName();
+fetchFiles();

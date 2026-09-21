@@ -1,0 +1,16 @@
+{
+  "name": "render-latex",
+  "version": "1.0.0",
+  "description": "Editor LaTeX local com preview ao vivo (estilo Overleaf), usando Tectonic para compilar.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.19.2",
+    "multer": "^2.4.0"
+  }
+}
