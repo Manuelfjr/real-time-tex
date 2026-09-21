@@ -13,9 +13,27 @@ app_port: 7860
 > página de um Space (veja [Deploy](#deploy-github--hugging-face-spaces)
 > mais abaixo); no GitHub ele só aparece como texto/YAML normal.
 
-Editor de LaTeX local com preview ao vivo, no estilo Overleaf: uma tela
-inicial lista seus projetos, e cada um abre num editor com `.tex` à esquerda
-e o PDF recompilado e exibido à direita automaticamente.
+Editor de LaTeX próprio — local ou num servidor seu — para escrever artigos,
+dissertações e outros projetos pessoais sem esbarrar nas limitações do
+Overleaf: sem plano pago pra colaborar em tempo real, sem trava de tamanho
+de projeto/imagem, sem fila de compilação nem editor travando em documentos
+grandes com muitas figuras. Você roda o `tectonic` na sua própria máquina
+(ou num servidor sempre ligado), então o limite é o seu hardware, não um
+plano de assinatura.
+
+Uma tela inicial lista seus projetos, e cada um abre num editor com `.tex` à
+esquerda e o PDF recompilado e exibido à direita automaticamente — como o
+Overleaf, mas sem as restrições dele.
+
+## Por que não só usar o Overleaf
+
+| Limitação do Overleaf (plano grátis/pago) | Aqui |
+| --- | --- |
+| Compilação trava/timeout em documentos grandes | Timeout configurável (`COMPILE_TIMEOUT_MS`, padrão 3 min); roda no seu hardware |
+| Upload de arquivo limitado (poucos MB) | `MAX_UPLOAD_MB` configurável (padrão 200MB por arquivo) |
+| Editor engasga com PDFs de muitas páginas | Preview virtualizado — só renderiza as páginas visíveis, mesmo em documentos de centenas de páginas |
+| Colaboração em tempo real exige plano pago | Incluída, de graça, rodando no seu servidor |
+| Projeto fica na nuvem de terceiros | Fica no seu disco (local ou seu servidor) |
 
 ## Requisitos
 
@@ -71,6 +89,8 @@ projetos.
 - O preview à direita é renderizado com PDF.js diretamente em `<canvas>`
   (rolagem contínua, zoom e indicador de página — sem a barra nativa do
   navegador), e mostra o log de compilação em caso de erro.
+- **Clique duplo no PDF** pula o editor direto pra linha do código que
+  gerou aquele trecho (SyncTeX), igual no Overleaf.
 - A barra lateral esquerda mostra os demais arquivos do projeto em árvore
   (imagens, `.bib`, outros `.tex`, subpastas, etc.). Dá para:
   - criar pastas com "+ Pasta" (aceita caminhos aninhados de uma vez, tipo
@@ -244,16 +264,6 @@ Depois de criar o Space, em **Settings → Variables and secrets**, adicione
 `SITE_PASSWORD` (como *secret*, não como variável pública) e, depois de
 anexar o bucket, `PROJECTS_DIR=/data/projects`. Cada `git push space main`
 reconstrói e reinicia o container (o bucket sobrevive a isso normalmente).
-
-### Colaboração em tempo real (próximo passo)
-
-Nada disso ainda existe — hoje cada projeto tem um único editor "por vez"
-(a última versão salva vence). Para editar em tempo real com outras
-pessoas via link, o caminho normal é uma biblioteca de CRDT (ex.: Yjs) +
-um servidor de sincronização, plugada no CodeMirror. É viável sobre a base
-atual, mas exige um host que mantenha WebSocket/processo vivo (Spaces com
-Docker permite; GitHub Pages não) — fica para quando você quiser avançar
-nisso.
 
 ## Limitações / próximos passos possíveis
 
