@@ -6,7 +6,10 @@ const crypto = require('crypto');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
 const { spawn } = require('child_process');
+const { Hocuspocus } = require('@hocuspocus/server');
+const nodeAdapter = require('crossws/adapters/node').default;
 
 const PORT = process.env.PORT || 4173;
 const ROOT_DIR = __dirname;
@@ -640,6 +643,68 @@ app.get('/api/projects/:id/output.pdf', (req, res) => {
   res.sendFile(file);
 });
 
-app.listen(PORT, () => {
+// --- Real-time collaborative editing (Yjs via Hocuspocus) -------------------
+// One Yjs document per project id, bridged to that project's main file on
+// disk: this keeps the file as the single source of truth, so compiling,
+// downloading, and reopening a project later all keep working exactly as
+// before — whether or not anyone happens to be connected right now.
+const COLLAB_PATH = '/collab';
+
+const hocuspocus = new Hocuspocus({
+  async onLoadDocument({ documentName, document }) {
+    if (!isValidProjectId(documentName) || !fs.existsSync(projectDir(documentName))) return;
+    if (document.isEmpty('content')) {
+      const texPath = mainFileAbs(documentName);
+      const content = fs.existsSync(texPath) ? fs.readFileSync(texPath, 'utf8') : '';
+      document.getText('content').insert(0, content);
+    }
+  },
+  async onStoreDocument({ documentName, document }) {
+    if (!isValidProjectId(documentName) || !fs.existsSync(projectDir(documentName))) return;
+    const texPath = mainFileAbs(documentName);
+    fs.mkdirSync(path.dirname(texPath), { recursive: true });
+    fs.writeFileSync(texPath, document.getText('content').toString(), 'utf8');
+    touchProject(documentName);
+  },
+});
+
+const collabAdapter = nodeAdapter({
+  hooks: {
+    open(peer) {
+      peer._hocuspocus = hocuspocus.handleConnection(peer.websocket, peer.request);
+    },
+    message(peer, message) {
+      peer._hocuspocus?.handleMessage(message.uint8Array());
+    },
+    close(peer, event) {
+      peer._hocuspocus?.handleClose({ code: event.code, reason: event.reason });
+    },
+    error(peer, error) {
+      console.error('Erro de WebSocket na colaboração:', error);
+    },
+  },
+});
+
+// WebSocket upgrades bypass Express entirely, so the SITE_PASSWORD gate
+// (an app.use middleware) never sees them — check the same auth cookie here
+// by hand so the collaboration channel isn't left open when everything else
+// requires a password.
+function isAuthenticatedUpgrade(req) {
+  if (!SITE_PASSWORD) return true;
+  const cookieHeader = req.headers.cookie || '';
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${AUTH_COOKIE}=([^;]+)`));
+  return Boolean(match && match[1] === authToken());
+}
+
+const server = http.createServer(app);
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url.startsWith(COLLAB_PATH) || !isAuthenticatedUpgrade(req)) {
+    socket.destroy();
+    return;
+  }
+  collabAdapter.handleUpgrade(req, socket, head);
+});
+
+server.listen(PORT, () => {
   console.log(`LaTeX live editor rodando em http://localhost:${PORT}`);
 });

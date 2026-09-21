@@ -1,4 +1,7 @@
 import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.min.mjs';
+import * as Y from 'https://esm.sh/yjs@13.6.32';
+import { CodemirrorBinding } from 'https://esm.sh/y-codemirror@3?deps=yjs@13.6.32';
+import { HocuspocusProvider } from 'https://esm.sh/@hocuspocus/provider@4?deps=yjs@13.6.32';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.mjs';
@@ -28,6 +31,7 @@ const fileInput = document.getElementById('file-input');
 const fileSidebar = document.getElementById('file-sidebar');
 const autocompileCheckbox = document.getElementById('autocompile-checkbox');
 const downloadLink = document.getElementById('download-link');
+const presenceRow = document.getElementById('presence-row');
 
 let pdfLoaded = false;
 let debounceTimer = null;
@@ -76,15 +80,82 @@ function setStatus(text, kind) {
   statusEl.className = 'status' + (kind ? ' ' + kind : '');
 }
 
-async function loadDocument() {
+// ------------------------------------------------------------------
+// Live collaboration: the CodeMirror buffer is bound to a shared Yjs
+// document synced through our own server (Hocuspocus), so every open tab
+// for this project — yours or a collaborator's — edits the same text in
+// real time. The server persists it to the project's file on disk (see
+// server.js's onStoreDocument), so the content is still there the next
+// time anyone opens it, whether or not someone else is online then.
+// ------------------------------------------------------------------
+
+const USERNAME_STORAGE_KEY = 'latex-live:username';
+const PRESENCE_COLORS = ['#F04E44', '#246A3C', '#3A2FDF', '#D73E5F', '#9355A0', '#7D470A'];
+
+function getOrPromptUsername() {
+  let name = '';
   try {
-    const res = await fetch(api('/document'));
-    const data = await res.json();
-    cm.setValue(data.content || '');
-    compile();
+    name = localStorage.getItem(USERNAME_STORAGE_KEY) || '';
   } catch (err) {
-    setStatus('Não foi possível carregar o documento.', 'error');
+    // ignore
   }
+  if (!name) {
+    name = (prompt('Seu nome (aparece para os outros editores):', '') || '').trim() || 'Convidado';
+    try {
+      localStorage.setItem(USERNAME_STORAGE_KEY, name);
+    } catch (err) {
+      // ignore
+    }
+  }
+  return name;
+}
+
+function colorForName(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return PRESENCE_COLORS[hash % PRESENCE_COLORS.length];
+}
+
+function renderPresence(awareness) {
+  const states = Array.from(awareness.getStates().values())
+    .map((s) => s.user)
+    .filter(Boolean);
+  presenceRow.innerHTML = '';
+  for (const user of states) {
+    const dot = document.createElement('span');
+    dot.className = 'presence-dot';
+    dot.style.background = user.color;
+    dot.title = user.name;
+    dot.textContent = user.name.slice(0, 1).toUpperCase();
+    presenceRow.appendChild(dot);
+  }
+}
+
+let firstSyncHandled = false;
+
+function setupCollaboration() {
+  const ydoc = new Y.Doc();
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  const provider = new HocuspocusProvider({
+    url: `${wsProtocol}//${location.host}/collab`,
+    name: PROJECT_ID,
+    document: ydoc,
+    onSynced: () => {
+      if (firstSyncHandled) return;
+      firstSyncHandled = true;
+      compile();
+    },
+  });
+
+  const username = getOrPromptUsername();
+  provider.awareness.setLocalStateField('user', { name: username, color: colorForName(username) });
+  renderPresence(provider.awareness);
+  provider.awareness.on('change', () => renderPresence(provider.awareness));
+
+  const yText = ydoc.getText('content');
+  const yUndoManager = new Y.UndoManager(yText);
+  new CodemirrorBinding(yText, cm, provider.awareness, { yUndoManager });
 }
 
 async function compile() {
@@ -684,6 +755,6 @@ fileSidebar.addEventListener('drop', (e) => {
 });
 
 logPanel.classList.add('collapsed');
-loadDocument();
+setupCollaboration();
 loadProjectName();
 fetchFiles();

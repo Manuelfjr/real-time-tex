@@ -8,8 +8,10 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@hocuspocus/server": "^4.7.0",
     "adm-zip": "^0.6.1",
     "cookie-parser": "^1.4.7",
+    "crossws": "^0.4.12",
     "express": "^4.19.2",
     "multer": "^2.4.0"
   }

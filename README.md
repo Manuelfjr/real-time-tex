@@ -60,6 +60,14 @@ projetos.
   em "Compilar agora" — a preferência fica salva no navegador.
 - O compile roda `tectonic` e inclui uma passada automática de BibTeX quando
   o documento usa `\bibliography`.
+- **Edição colaborativa em tempo real**: todo mundo que abrir o mesmo
+  projeto edita o mesmo texto ao vivo (via Yjs + Hocuspocus, rodando dentro
+  do próprio `server.js`, sem serviço externo). Na primeira vez que abre,
+  escolhe um nome — ele aparece como uma bolinha colorida no topo (quem
+  está online agora) e como cursor remoto no editor dos outros. O servidor
+  é sempre a cópia "de verdade": as edições são salvas no arquivo do
+  projeto no disco, então continuam lá mesmo que todo mundo saia — não
+  depende de ninguém estar online ao mesmo tempo para persistir.
 - O preview à direita é renderizado com PDF.js diretamente em `<canvas>`
   (rolagem contínua, zoom e indicador de página — sem a barra nativa do
   navegador), e mostra o log de compilação em caso de erro.
@@ -80,13 +88,17 @@ projetos.
 ## Estrutura
 
 ```
-server.js                    servidor Express: projetos, upload/zip, tectonic, serve o PDF
+server.js                    Express (projetos, upload/zip, tectonic) + Hocuspocus (colaboração) no mesmo processo/porta
 projects/<id>/                um projeto — arquivo principal + demais arquivos
 projects/<id>/.project.json   nome do projeto e qual arquivo é o principal
 projects/<id>/.output/        PDF gerado (ignorado no git)
 public/index.html             tela de projetos
-public/editor.html            editor (CodeMirror + preview PDF.js + sidebar)
+public/editor.html            editor (CodeMirror + Yjs + preview PDF.js + sidebar)
 ```
+
+A colaboração usa o WebSocket em `/collab` no mesmo host/porta do resto do
+app — qualquer host que sirva o resto (Cloudflare Tunnel, Hugging Face
+Spaces com Docker, uma VPS) já suporta isso, sem configuração extra.
 
 Cada projeto vive na sua própria pasta com um id gerado (uuid); o nome de
 exibição fica em `.project.json`, não no nome da pasta.
@@ -142,9 +154,13 @@ GitHub continua ótimo para versionar o código (é só um repositório git) —
 só a parte de _hospedar o app rodando_ que precisa de outro lugar.
 
 Este repositório já vem pronto para rodar em qualquer lugar que aceite um
-container Docker comum — inclusive **Hugging Face Spaces** (tem plano
-gratuito, roda Docker de verdade, e é onde a senha compartilhada faz
-sentido).
+container Docker comum — inclusive **Hugging Face Spaces**, que é onde a
+senha compartilhada faz sentido.
+
+⚠️ Em 2026 a Hugging Face passou a exigir uma conta **PRO (US$9/mês)** para
+criar Spaces com SDK Docker (antes tinha uma opção gratuita). Espaços
+**Static** continuam grátis, mas são só arquivos estáticos — não servem
+para este app, pelo mesmo motivo do GitHub Pages (ver acima).
 
 ### Senha de acesso
 
@@ -152,27 +168,31 @@ Sem configurar nada, o site continua aberto (bom para uso local). Para
 exigir senha, defina a variável de ambiente `SITE_PASSWORD`. Quem acessar
 sem o cookie de sessão é redirecionado para uma tela de login simples; a
 senha é comparada no servidor (não dá pra simplesmente ver o código-fonte e
-descobrir ou pular a checagem, como aconteceria numa página estática).
+descobrir ou pular a checagem, como aconteceria numa página estática). Para
+um grupo pequeno e fechado (ex.: você e seus orientadores), uma única senha
+fixa compartilhada é suficiente — não precisa de login por pessoa.
 
 ```bash
 SITE_PASSWORD=uma-senha-forte npm start
 ```
 
-### Persistência dos projetos — leia antes de confiar dados importantes
+### Persistência dos projetos
 
-Um container Docker comum (inclusive o disco padrão do Hugging Face
-Spaces) **perde tudo que foi escrito em disco sempre que reinicia** —
-qualquer projeto criado ou importado pelo site some. Duas opções:
+Um container Docker comum **perde tudo que foi escrito em disco sempre que
+reinicia**. No Hugging Face Spaces, a forma atual de resolver isso é criar
+um **Storage Bucket** (em [huggingface.co/new-bucket](https://huggingface.co/new-bucket))
+e anexá-lo ao Space como um volume:
 
-1. **Aceitar que é efêmero** — bom para demonstrar o app ou sessões curtas,
-   ruim para guardar uma dissertação de verdade.
-2. **Apontar `PROJECTS_DIR` para um disco que persiste** — no Hugging Face
-   Spaces isso é o add-on pago "Persistent Storage" (monta em `/data`):
-   ```bash
-   PROJECTS_DIR=/data/projects
-   ```
-   Em outros hosts (VPS, etc.), aponte para qualquer volume que sobrevive a
-   reinícios.
+1. Crie um bucket privado (ex.: `latex-live-data`).
+2. Na página do Space, em **Settings → Storage**, anexe esse bucket e
+   escolha um caminho de montagem, por exemplo `/data`.
+3. Configure a variável `PROJECTS_DIR=/data/projects` no Space (o app já
+   lê essa variável para saber onde guardar os projetos).
+
+A conta **PRO já inclui 1TB de armazenamento privado** — para uso pessoal
+(alguns `.tex`, imagens e PDFs compilados, sem vídeos/datasets pesados),
+isso não deve gerar custo além da própria assinatura PRO. Sem esse passo,
+qualquer projeto criado pelo site some no próximo restart do Space.
 
 ### Publicando nos dois lugares
 
@@ -190,15 +210,15 @@ git remote add origin https://github.com/<seu-usuario>/<seu-repo>.git
 git push -u origin main
 
 # Hugging Face Space (onde o app roda de fato)
-# Crie o Space antes em huggingface.co/new-space, SDK "Docker"
+# Crie o Space antes em huggingface.co/new-space, SDK "Docker" (requer PRO)
 git remote add space https://huggingface.co/spaces/<seu-usuario>/<nome-do-space>
 git push space main
 ```
 
 Depois de criar o Space, em **Settings → Variables and secrets**, adicione
-`SITE_PASSWORD` (como *secret*) e, se for usar o Persistent Storage,
-`PROJECTS_DIR=/data/projects`. Cada `git push space main` reconstrói e
-reinicia o container.
+`SITE_PASSWORD` (como *secret*, não como variável pública) e, depois de
+anexar o bucket, `PROJECTS_DIR=/data/projects`. Cada `git push space main`
+reconstrói e reinicia o container (o bucket sobrevive a isso normalmente).
 
 ### Colaboração em tempo real (próximo passo)
 
@@ -222,4 +242,9 @@ nisso.
 - Detecção do arquivo principal num zip importado é uma heurística; em
   projetos com múltiplos `.tex` ambíguos pode escolher errado (o aviso na
   tela inicial avisa qual foi escolhido).
-- Sem histórico de versões nem colaboração em tempo real.
+- Sem histórico de versões (quem editou o quê, ou voltar a uma versão
+  anterior) — a colaboração em tempo real existe, mas não há um "log" de
+  mudanças.
+- A colaboração é só no arquivo principal do projeto (mesma limitação de
+  edição citada acima); não há controle de quem pode editar além da senha
+  compartilhada do site.
