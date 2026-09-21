@@ -176,7 +176,32 @@ fixa compartilhada é suficiente — não precisa de login por pessoa.
 SITE_PASSWORD=uma-senha-forte npm start
 ```
 
-### Persistência dos projetos
+### Alternativa gratuita: túnel a partir de uma máquina sempre ligada
+
+Sem pagar nada, dá pra ter um link público estável rodando isso numa
+máquina que nunca desliga (ex.: um servidor do laboratório/departamento),
+usando [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+— sem precisar de conta Cloudflare para o modo "quick tunnel" usado aqui.
+
+```bash
+git clone https://github.com/<seu-usuario>/<seu-repo>.git
+cd <seu-repo>
+npm install
+tmux new -s latex-live      # sobrevive a você desconectar do SSH
+./run-forever.sh            # sobe o servidor + túnel, reinicia sozinho se cair
+# Ctrl+B depois D para "desanexar" sem matar o processo
+```
+
+O link atual fica sempre em `tunnel-url.txt` (é regerado se o processo
+precisar reiniciar); os logs ficam em `.run-logs/`. Pra voltar mais tarde:
+`tmux attach -t latex-live`. `share.sh` faz a mesma coisa de forma mais
+simples, sem loop de reinício — bom para compartilhar rapidamente a partir
+do seu próprio notebook, por uma sessão só.
+
+Como os projetos ficam em disco normal (não um container efêmero), a
+persistência aqui já funciona sem nenhuma configuração extra.
+
+### Persistência dos projetos (Hugging Face Spaces)
 
 Um container Docker comum **perde tudo que foi escrito em disco sempre que
 reinicia**. No Hugging Face Spaces, a forma atual de resolver isso é criar
