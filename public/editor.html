@@ -53,12 +53,17 @@
         </div>
         <input type="file" id="file-input" multiple hidden />
       </div>
+      <div class="tree-row main-file-row" id="main-file-row" title="Arquivo principal do projeto">
+        <span class="file-icon">📌</span>
+        <span class="file-name" id="main-file-name">main.tex</span>
+      </div>
       <ul class="file-list" id="file-list">
         <li class="file-empty">Nenhum arquivo ainda</li>
       </ul>
       <p class="sidebar-hint">
-        Clique num arquivo para inserir o comando LaTeX correspondente no cursor. Use ✎ para renomear
-        e ✕ para excluir. Pastas podem ser criadas com caminhos como "imagens/graficos".
+        Clique num arquivo <code>.tex</code>/<code>.bib</code> para abri-lo no editor. Use "⇥" pra
+        inserir uma referência a ele no arquivo aberto, ✎ para renomear e ✕ para excluir. Pastas
+        podem ser criadas com caminhos como "imagens/graficos".
       </p>
     </aside>
 

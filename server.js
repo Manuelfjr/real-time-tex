@@ -292,8 +292,14 @@ async function processQueue(id) {
 function runCompile(id, content) {
   return new Promise((resolve) => {
     const texPath = mainFileAbs(id);
-    fs.mkdirSync(path.dirname(texPath), { recursive: true });
-    fs.writeFileSync(texPath, content, 'utf8');
+    // The main file is now kept up to date continuously by the Yjs
+    // collaboration layer (onStoreDocument) — content is only written here
+    // when a caller explicitly passes it (e.g. a non-collaborative client);
+    // otherwise this just (re)compiles whatever's already on disk.
+    if (typeof content === 'string') {
+      fs.mkdirSync(path.dirname(texPath), { recursive: true });
+      fs.writeFileSync(texPath, content, 'utf8');
+    }
     const outDir = outputDir(id);
     fs.mkdirSync(outDir, { recursive: true });
 
@@ -632,11 +638,8 @@ app.post('/api/projects/:id/delete', (req, res) => {
 
 app.post('/api/projects/:id/compile', async (req, res) => {
   const { content } = req.body || {};
-  if (typeof content !== 'string') {
-    return res.status(400).json({ success: false, log: 'Conteúdo inválido.' });
-  }
   try {
-    const result = await requestCompile(req.params.id, content);
+    const result = await requestCompile(req.params.id, typeof content === 'string' ? content : undefined);
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, log: String(err) });
@@ -715,48 +718,85 @@ app.post('/api/projects/:id/sync', (req, res) => {
 });
 
 // --- Real-time collaborative editing (Yjs via Hocuspocus) -------------------
-// One Yjs document per project id, bridged to that project's main file on
-// disk: this keeps the file as the single source of truth, so compiling,
-// downloading, and reopening a project later all keep working exactly as
-// before — whether or not anyone happens to be connected right now.
+// Yjs documents are named "<projectId>:<relative file path>", so any text
+// file in a project — not just the main one — can be opened for live,
+// persisted editing. Each is bridged to that exact file on disk: this keeps
+// the file as the single source of truth, so compiling, downloading, and
+// reopening a project later all keep working exactly as before — whether or
+// not anyone happens to be connected right now.
 const COLLAB_PATH = '/collab';
 
-// Guards against a duplication race: if the server process restarts while a
-// client still holds an open (or auto-reconnecting) connection, Hocuspocus
-// hands onLoadDocument a fresh, empty in-memory Document — seeding it from
-// disk while that client's own already-synced copy merges back in produces
-// two independent Yjs insertions of the same text, which the CRDT (correctly,
-// by its own rules) keeps as two copies instead of one. Seeding at most once
-// per project per server process lifetime closes that window.
-const seededFromDisk = new Set();
+// Belt-and-braces guard, independent of *why* a Yjs document might end up
+// duplicated (a stale browser tab reconnecting with old state after a
+// server restart is the main known cause, but this stays useful regardless
+// of the cause): refuse to persist content that structurally looks like
+// itself repeated, rather than overwriting a good file on disk with a bad
+// one. Returns a reason string when content looks corrupted, else null.
+function detectCorruption(content, isMainFile) {
+  if (isMainFile) {
+    const documentclassCount = (content.match(/\\documentclass/g) || []).length;
+    if (documentclassCount > 1) return `\\documentclass aparece ${documentclassCount}x`;
+  }
+  const lines = content.split('\n');
+  let run = 1;
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line && line === lines[i - 1].trim()) {
+      run++;
+      if (run >= 3) return `linha repetida ${run}x seguidas: "${line.slice(0, 60)}"`;
+    } else {
+      run = 1;
+    }
+  }
+  return null;
+}
 
+function parseDocumentName(documentName) {
+  const sep = String(documentName || '').indexOf(':');
+  if (sep === -1) return null;
+  const projectId = documentName.slice(0, sep);
+  const relPath = documentName.slice(sep + 1);
+  if (!isValidProjectId(projectId) || !fs.existsSync(projectDir(projectId))) return null;
+  try {
+    const { abs, rel } = resolveProjectPath(projectId, relPath);
+    if (!rel) return null;
+    return { projectId, relPath: rel, abs };
+  } catch {
+    return null;
+  }
+}
+
+// A stale client reconnecting (e.g. after a server restart, or after this
+// document was unloaded and reloaded) can race with the seed-from-disk
+// below and produce duplicated content — the CRDT correctly keeps both
+// independent insertions rather than recognizing them as "the same text".
+// That's hard to fully rule out here, so `detectCorruption` in
+// onStoreDocument is the real safety net: it refuses to ever persist the
+// result to disk. Seeding must still run every time a genuinely empty
+// Document is loaded (including after a legitimate unload+reload, e.g.
+// switching back to a file nobody else has open) — a "seed only once per
+// process" guard was tried here and caused exactly that regression.
 const hocuspocus = new Hocuspocus({
   async onLoadDocument({ documentName, document }) {
-    if (!isValidProjectId(documentName) || !fs.existsSync(projectDir(documentName))) return;
-    if (seededFromDisk.has(documentName)) return;
-    seededFromDisk.add(documentName);
+    const target = parseDocumentName(documentName);
+    if (!target) return;
     if (document.isEmpty('content')) {
-      const texPath = mainFileAbs(documentName);
-      const content = fs.existsSync(texPath) ? fs.readFileSync(texPath, 'utf8') : '';
+      const content = fs.existsSync(target.abs) ? fs.readFileSync(target.abs, 'utf8') : '';
       document.getText('content').insert(0, content);
     }
   },
   async onStoreDocument({ documentName, document }) {
-    if (!isValidProjectId(documentName) || !fs.existsSync(projectDir(documentName))) return;
+    const target = parseDocumentName(documentName);
+    if (!target) return;
     const content = document.getText('content').toString();
-    // Defensive guard against the duplication race above (or any other future
-    // cause of the same symptom): a single main file should never contain
-    // \documentclass more than once. Refuse to persist obviously-corrupted
-    // content rather than overwriting a good file on disk with a bad one.
-    const documentclassCount = (content.match(/\\documentclass/g) || []).length;
-    if (documentclassCount > 1) {
-      console.error(`Recusando salvar ${documentName}: conteúdo parece duplicado (\\documentclass aparece ${documentclassCount}x).`);
+    const reason = detectCorruption(content, target.relPath === getMainFileRel(target.projectId));
+    if (reason) {
+      console.error(`Recusando salvar ${documentName}: ${reason}`);
       return;
     }
-    const texPath = mainFileAbs(documentName);
-    fs.mkdirSync(path.dirname(texPath), { recursive: true });
-    fs.writeFileSync(texPath, content, 'utf8');
-    touchProject(documentName);
+    fs.mkdirSync(path.dirname(target.abs), { recursive: true });
+    fs.writeFileSync(target.abs, content, 'utf8');
+    touchProject(target.projectId);
   },
 });
 

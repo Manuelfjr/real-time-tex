@@ -267,19 +267,13 @@ reconstrói e reinicia o container (o bucket sobrevive a isso normalmente).
 
 ## Limitações / próximos passos possíveis
 
-- Só o arquivo principal do projeto é editável pela interface; outros
-  arquivos `.tex` (capítulos, por exemplo) podem ser referenciados com
-  `\input`, mas para editar o conteúdo deles hoje é preciso abrir o arquivo
-  em `projects/<id>/` por fora. Dá para adicionar abas para editar múltiplos
-  arquivos se for útil.
 - Renomear só muda o nome dentro da mesma pasta (não dá para mover um
   arquivo para outra pasta arrastando — ainda).
 - Detecção do arquivo principal num zip importado é uma heurística; em
   projetos com múltiplos `.tex` ambíguos pode escolher errado (o aviso na
   tela inicial avisa qual foi escolhido).
 - Sem histórico de versões (quem editou o quê, ou voltar a uma versão
-  anterior) — a colaboração em tempo real existe, mas não há um "log" de
-  mudanças.
-- A colaboração é só no arquivo principal do projeto (mesma limitação de
-  edição citada acima); não há controle de quem pode editar além da senha
-  compartilhada do site.
+  anterior) — a colaboração em tempo real existe (em qualquer arquivo `.tex`,
+  `.bib`, `.sty` ou `.cls` do projeto, não só no principal), mas não há um
+  "log" de mudanças.
+- Não há controle de quem pode editar além da senha compartilhada do site.

@@ -409,6 +409,19 @@ button, input {
   background: var(--surface-sunken);
 }
 
+.tree-row.active,
+.main-file-row.active {
+  background: var(--surface-sunken);
+  color: var(--urucum);
+  font-weight: var(--weight-semibold);
+}
+
+.main-file-row {
+  margin: var(--space-2);
+  margin-bottom: 0;
+  border: 1px solid var(--border-subtle);
+}
+
 .tree-row .folder-caret {
   flex-shrink: 0;
   font-size: 9px;

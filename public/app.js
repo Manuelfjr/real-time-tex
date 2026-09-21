@@ -32,6 +32,8 @@ const fileSidebar = document.getElementById('file-sidebar');
 const autocompileCheckbox = document.getElementById('autocompile-checkbox');
 const downloadLink = document.getElementById('download-link');
 const presenceRow = document.getElementById('presence-row');
+const mainFileRow = document.getElementById('main-file-row');
+const mainFileNameEl = document.getElementById('main-file-name');
 
 let pdfLoaded = false;
 let debounceTimer = null;
@@ -131,22 +133,45 @@ function renderPresence(awareness) {
   }
 }
 
+let mainFileRel = null; // set once from the project's metadata, at startup
+let currentFile = null; // relative path of whatever connectToFile last opened
+let currentProvider = null;
+let currentBinding = null;
 let firstSyncHandled = false;
 
-function setupCollaboration() {
+// Switches the editor to a given file in the project (defaults to the main
+// file). Each file is its own Yjs document ("<projectId>:<relPath>"),
+// bridged to that exact file on disk server-side, so any of them — not just
+// the main file — can be opened, edited live with collaborators, and stays
+// saved whether or not anyone's connected.
+function connectToFile(relPath, onReady) {
+  if (relPath === currentFile) {
+    if (onReady) onReady();
+    return;
+  }
+  if (currentBinding) currentBinding.destroy();
+  if (currentProvider) currentProvider.destroy();
+
+  currentFile = relPath;
+  updateActiveFileUI();
+
   const ydoc = new Y.Doc();
   const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const isMain = relPath === mainFileRel;
 
   const provider = new HocuspocusProvider({
     url: `${wsProtocol}//${location.host}/collab`,
-    name: PROJECT_ID,
+    name: `${PROJECT_ID}:${relPath}`,
     document: ydoc,
     onSynced: () => {
-      if (firstSyncHandled) return;
-      firstSyncHandled = true;
-      compile();
+      if (isMain && !firstSyncHandled) {
+        firstSyncHandled = true;
+        compile();
+      }
+      if (onReady) onReady();
     },
   });
+  currentProvider = provider;
 
   const username = getOrPromptUsername();
   provider.awareness.setLocalStateField('user', { name: username, color: colorForName(username) });
@@ -155,18 +180,37 @@ function setupCollaboration() {
 
   const yText = ydoc.getText('content');
   const yUndoManager = new Y.UndoManager(yText);
-  new CodemirrorBinding(yText, cm, provider.awareness, { yUndoManager });
+  currentBinding = new CodemirrorBinding(yText, cm, provider.awareness, { yUndoManager });
+
+  cm.setOption('readOnly', false);
+  setStatus(isMain ? 'Carregando…' : `Editando ${relPath}`, isMain ? undefined : 'pending');
+  updateActiveFileUI();
 }
+
+function updateActiveFileUI() {
+  if (mainFileNameEl) mainFileNameEl.textContent = mainFileRel || 'main.tex';
+  if (mainFileRow) mainFileRow.classList.toggle('active', currentFile === mainFileRel);
+  fileListEl.querySelectorAll('.tree-row[data-path]').forEach((row) => {
+    row.classList.toggle('active', row.dataset.path === currentFile);
+  });
+}
+
+mainFileRow.addEventListener('click', () => connectToFile(mainFileRel));
 
 async function compile() {
   dirty = false;
   setStatus('Compilando…');
   compileBtn.disabled = true;
   try {
+    // Yjs already keeps the main file on disk in sync (onStoreDocument), so
+    // compiling never needs the editor's current buffer — good, because
+    // that buffer might currently be showing a different file (e.g. a
+    // chapter opened from the sidebar), and sending it here would
+    // overwrite main.tex with the wrong content.
     const res = await fetch(api('/compile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: cm.getValue() }),
+      body: JSON.stringify({}),
     });
     const result = await res.json();
     await handleCompileResult(result);
@@ -397,15 +441,15 @@ async function jumpToSource(page, x, y) {
     });
     const data = await res.json();
     if (!data.success) return;
-    if (!data.isMainFile) {
-      setStatus(`Esse trecho está em ${data.file} — abra esse arquivo para editar.`, 'pending');
-      return;
-    }
+    const targetFile = data.isMainFile ? mainFileRel : data.file;
+    if (!targetFile) return;
     const line = Math.max(0, data.line - 1);
-    cm.setCursor({ line, ch: 0 });
-    cm.scrollIntoView({ line, ch: 0 }, 100);
-    cm.focus();
-    flashLine(line);
+    connectToFile(targetFile, () => {
+      cm.setCursor({ line, ch: 0 });
+      cm.scrollIntoView({ line, ch: 0 }, 100);
+      cm.focus();
+      flashLine(line);
+    });
   } catch (err) {
     console.error('Falha ao sincronizar PDF -> código', err);
   }
@@ -494,9 +538,12 @@ async function loadProjectName() {
     const res = await fetch(api(''));
     const data = await res.json();
     applyProjectName(data.name || '');
+    mainFileRel = data.mainFile || 'main.tex';
   } catch (err) {
     // keep the placeholder if this fails — non-critical
+    mainFileRel = mainFileRel || 'main.tex';
   }
+  connectToFile(mainFileRel);
 }
 
 async function saveProjectName() {
@@ -529,6 +576,7 @@ projectNameInput.addEventListener('keydown', (e) => {
 // ------------------------------------------------------------------
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
+const EDITABLE_EXT = ['tex', 'bib', 'sty', 'cls'];
 let pendingUploadFolder = '';
 
 function extOf(name) {
@@ -598,11 +646,12 @@ function renderFileTree(tree) {
   fileListEl.innerHTML = '';
   if (tree.length === 0) {
     fileListEl.innerHTML = '<li class="file-empty">Nenhum arquivo ainda</li>';
-    return;
+  } else {
+    for (const node of tree) {
+      fileListEl.appendChild(buildTreeNode(node));
+    }
   }
-  for (const node of tree) {
-    fileListEl.appendChild(buildTreeNode(node));
-  }
+  updateActiveFileUI();
 }
 
 function buildTreeNode(node) {
@@ -690,6 +739,7 @@ function buildTreeNode(node) {
     li.appendChild(children);
   } else {
     li.className = 'tree-file';
+    row.dataset.path = node.path;
 
     const icon = document.createElement('span');
     icon.className = 'file-icon';
@@ -699,17 +749,35 @@ function buildTreeNode(node) {
     name.className = 'file-name';
     name.textContent = node.name;
 
+    const editable = EDITABLE_EXT.includes(extOf(node.name));
+
+    if (editable) {
+      const insertRef = document.createElement('span');
+      insertRef.className = 'tree-action';
+      insertRef.textContent = '⇥';
+      insertRef.title = 'Inserir referência no arquivo aberto';
+      insertRef.addEventListener('click', (e) => {
+        e.stopPropagation();
+        insertSnippetSafely(snippetFor(node.path));
+      });
+      actions.appendChild(insertRef);
+    }
     actions.appendChild(rename);
     actions.appendChild(del);
 
     row.appendChild(icon);
     row.appendChild(name);
     row.appendChild(actions);
-    row.title = 'Clique para inserir no editor';
 
-    row.addEventListener('click', () => {
-      insertSnippetSafely(snippetFor(node.path));
-    });
+    if (editable) {
+      row.title = 'Clique para abrir e editar este arquivo';
+      row.addEventListener('click', () => connectToFile(node.path));
+    } else {
+      row.title = 'Clique para inserir no editor';
+      row.addEventListener('click', () => {
+        insertSnippetSafely(snippetFor(node.path));
+      });
+    }
 
     li.appendChild(row);
   }
@@ -814,6 +882,5 @@ fileSidebar.addEventListener('drop', (e) => {
 });
 
 logPanel.classList.add('collapsed');
-setupCollaboration();
 loadProjectName();
 fetchFiles();
