@@ -28,7 +28,7 @@ trap cleanup EXIT
 sleep 1
 
 TUNNEL_LOG="$(mktemp)"
-cloudflared tunnel --url "http://localhost:$PORT" > "$TUNNEL_LOG" 2>&1 &
+cloudflared tunnel --protocol http2 --url "http://localhost:$PORT" > "$TUNNEL_LOG" 2>&1 &
 TUNNEL_PID=$!
 
 echo "Abrindo o túnel público..."

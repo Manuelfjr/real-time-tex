@@ -73,7 +73,7 @@ while true; do
 
   echo "[$(ts)] iniciando túnel..."
   : > "$LOG_DIR/tunnel.log"
-  cloudflared tunnel --url "http://localhost:$PORT" >> "$LOG_DIR/tunnel.log" 2>&1 &
+  cloudflared tunnel --protocol http2 --url "http://localhost:$PORT" >> "$LOG_DIR/tunnel.log" 2>&1 &
   TUNNEL_PID=$!
 
   URL=""
