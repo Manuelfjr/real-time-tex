@@ -6,7 +6,7 @@
     <string>com.latexlive.share</string>
     <key>ProgramArguments</key>
     <array>
-        <string>__PROJECT_DIR__/share.sh</string>
+        <string>__PROJECT_DIR__/run-forever.sh</string>
     </array>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>
@@ -22,6 +22,8 @@
     <dict>
         <key>SITE_PASSWORD</key>
         <string>tese2026</string>
+        <key>ANTHROPIC_API_KEY</key>
+        <string></string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>

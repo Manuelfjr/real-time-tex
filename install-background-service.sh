@@ -6,6 +6,7 @@
 # Uso:
 #   ./install-background-service.sh
 #   SITE_PASSWORD=outrasenha ./install-background-service.sh
+#   ANTHROPIC_API_KEY=sk-ant-... ./install-background-service.sh   # ativa o assistente de IA
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -19,6 +20,9 @@ sed "s#__PROJECT_DIR__#$PROJECT_DIR#g" "$PLIST_NAME" > "$DEST"
 
 if [ -n "${SITE_PASSWORD:-}" ]; then
   /usr/libexec/PlistBuddy -c "Set :EnvironmentVariables:SITE_PASSWORD $SITE_PASSWORD" "$DEST"
+fi
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  /usr/libexec/PlistBuddy -c "Set :EnvironmentVariables:ANTHROPIC_API_KEY $ANTHROPIC_API_KEY" "$DEST"
 fi
 
 launchctl unload "$DEST" 2>/dev/null || true

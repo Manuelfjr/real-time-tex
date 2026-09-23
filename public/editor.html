@@ -41,6 +41,7 @@
 
     <button id="compile-btn" class="btn btn-primary">Compilar agora</button>
     <a id="download-link" class="btn btn-secondary" href="#" download="documento.pdf">Baixar PDF</a>
+    <button id="chat-toggle-btn" class="btn btn-secondary" title="Assistente de escrita">✨ Assistente</button>
   </header>
 
   <main class="workspace">
@@ -95,6 +96,28 @@
         </div>
       </section>
     </div>
+
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-header">
+        <div class="sidebar-title">Assistente de escrita</div>
+        <button type="button" class="chat-close-btn" id="chat-close-btn" title="Fechar">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <p class="chat-empty-hint">
+          Pergunte sobre LaTeX, peça pra revisar um trecho ou explicar um erro de compilação.
+          O assistente vê o arquivo aberto no editor agora.
+        </p>
+      </div>
+      <form class="chat-input-row" id="chat-form">
+        <textarea
+          id="chat-input"
+          class="chat-input"
+          placeholder="Escreva sua pergunta… (Enter envia, Shift+Enter quebra linha)"
+          rows="2"
+        ></textarea>
+        <button type="submit" class="btn btn-primary chat-send-btn" id="chat-send-btn">Enviar</button>
+      </form>
+    </aside>
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>

@@ -881,6 +881,126 @@ fileSidebar.addEventListener('drop', (e) => {
   uploadFiles(e.dataTransfer.files, '');
 });
 
+// ------------------------------------------------------------------
+// AI writing assistant: a chat sidebar backed by POST /chat, which proxies
+// to the Anthropic API server-side (the key never reaches the browser).
+// Each message includes the relative path of whatever file is currently
+// open (`currentFile`), so the server can attach its content as context.
+// ------------------------------------------------------------------
+
+const chatToggleBtn = document.getElementById('chat-toggle-btn');
+const chatPanel = document.getElementById('chat-panel');
+const chatCloseBtn = document.getElementById('chat-close-btn');
+const chatMessagesEl = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatSendBtn = document.getElementById('chat-send-btn');
+
+const chatHistory = []; // { role: 'user' | 'assistant', content }
+let chatStreaming = false;
+
+chatToggleBtn.addEventListener('click', () => {
+  chatPanel.classList.toggle('open');
+  if (chatPanel.classList.contains('open')) chatInput.focus();
+});
+chatCloseBtn.addEventListener('click', () => chatPanel.classList.remove('open'));
+
+function appendChatMessage(className, text) {
+  const el = document.createElement('div');
+  el.className = `chat-msg ${className}`;
+  el.textContent = text;
+  chatMessagesEl.appendChild(el);
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  return el;
+}
+
+// Minimal fenced-code-block rendering (```lang ... ```) so LaTeX snippets
+// show up monospaced — not a full markdown parser, just enough for that.
+function renderChatText(el, text) {
+  el.innerHTML = '';
+  const parts = text.split(/```[a-z]*\n([\s\S]*?)```/g);
+  parts.forEach((part, i) => {
+    if (i % 2 === 0) {
+      if (part) el.appendChild(document.createTextNode(part));
+    } else {
+      const pre = document.createElement('pre');
+      const code = document.createElement('code');
+      code.textContent = part;
+      pre.appendChild(code);
+      el.appendChild(pre);
+    }
+  });
+}
+
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text || chatStreaming) return;
+  chatInput.value = '';
+  appendChatMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  const assistantEl = appendChatMessage('assistant pending', '');
+  chatStreaming = true;
+  chatSendBtn.disabled = true;
+
+  let assistantText = '';
+  try {
+    const res = await fetch(api('/chat'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory, file: currentFile }),
+    });
+    if (!res.ok || !res.body) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Erro ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop();
+      for (const evt of events) {
+        const line = evt.trim();
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]' || !payload) continue;
+        const parsed = JSON.parse(payload);
+        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.text) {
+          assistantText += parsed.text;
+          assistantEl.classList.remove('pending');
+          renderChatText(assistantEl, assistantText);
+          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        }
+      }
+    }
+    chatHistory.push({ role: 'assistant', content: assistantText });
+  } catch (err) {
+    assistantEl.remove();
+    appendChatMessage('error', assistantText ? `${assistantText}\n\n[interrompido: ${err.message}]` : `Erro: ${err.message}`);
+  } finally {
+    chatStreaming = false;
+    chatSendBtn.disabled = false;
+  }
+}
+
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  sendChatMessage();
+});
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+});
+
 logPanel.classList.add('collapsed');
 loadProjectName();
 fetchFiles();

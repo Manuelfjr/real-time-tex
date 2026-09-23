@@ -91,6 +91,11 @@ projetos.
   navegador), e mostra o log de compilação em caso de erro.
 - **Clique duplo no PDF** pula o editor direto pra linha do código que
   gerou aquele trecho (SyncTeX), igual no Overleaf.
+- **Assistente de IA** ("✨ Assistente", no topo): chat lateral para tirar
+  dúvida de LaTeX, pedir revisão de um trecho ou explicar um erro de
+  compilação — ele vê o arquivo aberto no editor como contexto. Precisa de
+  `ANTHROPIC_API_KEY` configurada no servidor (veja abaixo); sem ela, o
+  painel mostra um aviso em vez de travar.
 - A barra lateral esquerda mostra os demais arquivos do projeto em árvore
   (imagens, `.bib`, outros `.tex`, subpastas, etc.). Dá para:
   - criar pastas com "+ Pasta" (aceita caminhos aninhados de uma vez, tipo
@@ -194,6 +199,25 @@ fixa compartilhada é suficiente — não precisa de login por pessoa.
 
 ```bash
 SITE_PASSWORD=uma-senha-forte npm start
+```
+
+### Assistente de IA
+
+O chat lateral usa a API da Anthropic (modelo Haiku, escolhido por custo —
+suficiente para ajuda com LaTeX/redação acadêmica). Cobra por uso; crie uma
+chave em [console.anthropic.com](https://console.anthropic.com) e defina um
+teto de gasto mensal em **Settings → Limits** antes de configurar. Sem a
+variável abaixo, o assistente fica desativado (o resto do app funciona
+normal):
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm start
+```
+
+Rodando como serviço em segundo plano (launchd), passe pro instalador:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... ./install-background-service.sh
 ```
 
 ### Alternativa gratuita: túnel a partir de uma máquina sempre ligada

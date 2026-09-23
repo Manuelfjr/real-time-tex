@@ -9,6 +9,7 @@ const path = require('path');
 const http = require('http');
 const zlib = require('zlib');
 const { spawn } = require('child_process');
+const Anthropic = require('@anthropic-ai/sdk');
 const { Hocuspocus } = require('@hocuspocus/server');
 const nodeAdapter = require('crossws/adapters/node').default;
 const synctexParser = require('./lib/synctex-parser');
@@ -25,6 +26,7 @@ const PROJECTS_ROOT = process.env.PROJECTS_DIR || path.join(ROOT_DIR, 'projects'
 // SITE_PASSWORD to require it — meant for when this is deployed somewhere
 // reachable by other people, not as strong access control on its own.
 const SITE_PASSWORD = process.env.SITE_PASSWORD || '';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 const AUTH_COOKIE = 'latex_live_auth';
 
@@ -717,6 +719,91 @@ app.post('/api/projects/:id/sync', (req, res) => {
   }
 });
 
+// --- AI writing assistant (Anthropic API) ------------------------------------
+// Disabled until ANTHROPIC_API_KEY is set — the sidebar chat shows a message
+// explaining that instead of failing. Model is fixed to Haiku: this app is
+// shared by a handful of trusted people (the user + advisors) behind one
+// password, so cost per message matters more than squeezing out the last bit
+// of quality, and Haiku is already strong for LaTeX/writing help.
+const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+const CHAT_MODEL = 'claude-haiku-4-5-20251001';
+const CHAT_MAX_TOKENS = 1024;
+const CHAT_RATE_LIMIT_PER_MIN = 20; // server-wide — guards against a runaway loop eating the budget, not against these specific trusted users
+
+let chatRequestTimestamps = [];
+function chatRateLimitExceeded() {
+  const now = Date.now();
+  chatRequestTimestamps = chatRequestTimestamps.filter((t) => now - t < 60_000);
+  if (chatRequestTimestamps.length >= CHAT_RATE_LIMIT_PER_MIN) return true;
+  chatRequestTimestamps.push(now);
+  return false;
+}
+
+app.post('/api/projects/:id/chat', async (req, res) => {
+  if (!anthropic) {
+    return res.status(503).json({ error: 'Assistente de IA não configurado neste servidor (falta ANTHROPIC_API_KEY).' });
+  }
+  const { messages, file } = req.body || {};
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Nenhuma mensagem enviada.' });
+  }
+  if (chatRateLimitExceeded()) {
+    return res.status(429).json({ error: 'Muitas mensagens em pouco tempo — espere um minuto e tente de novo.' });
+  }
+
+  let systemPrompt =
+    'Você é um assistente de escrita acadêmica e LaTeX, integrado a um editor local chamado LaTeX Live. ' +
+    'Responda em português do Brasil, de forma direta e concisa. Quando sugerir código LaTeX, use blocos de código.';
+  if (typeof file === 'string') {
+    try {
+      const { abs, rel } = resolveProjectPath(req.params.id, file);
+      if (rel && fs.existsSync(abs) && fs.statSync(abs).isFile()) {
+        const content = fs.readFileSync(abs, 'utf8').slice(0, 20_000);
+        systemPrompt += `\n\nArquivo aberto no editor agora (${rel}):\n\`\`\`latex\n${content}\n\`\`\``;
+      }
+    } catch {
+      // unknown/invalid file — just skip the extra context
+    }
+  }
+
+  const safeMessages = messages
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+    .slice(-20)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }));
+  if (safeMessages.length === 0) {
+    return res.status(400).json({ error: 'Nenhuma mensagem válida enviada.' });
+  }
+
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.flushHeaders();
+
+  const stream = anthropic.messages.stream({
+    model: CHAT_MODEL,
+    max_tokens: CHAT_MAX_TOKENS,
+    system: systemPrompt,
+    messages: safeMessages,
+  });
+  req.on('close', () => stream.abort());
+  stream.on('text', (text) => {
+    res.write(`data: ${JSON.stringify({ text })}\n\n`);
+  });
+  stream.on('error', (err) => {
+    res.write(`data: ${JSON.stringify({ error: String((err && err.message) || err) })}\n\n`);
+    res.end();
+  });
+  try {
+    await stream.finalMessage();
+  } catch {
+    // already reported via the 'error' listener above
+  }
+  res.write('data: [DONE]\n\n');
+  res.end();
+});
+
 // --- Real-time collaborative editing (Yjs via Hocuspocus) -------------------
 // Yjs documents are named "<projectId>:<relative file path>", so any text
 // file in a project — not just the main one — can be opened for live,
@@ -747,6 +834,19 @@ function detectCorruption(content, isMainFile) {
     } else {
       run = 1;
     }
+  }
+
+  // Catches a different shape of the same race: the whole document (or a
+  // large chunk of it) copied as a second, separate block instead of
+  // repeated line-by-line — e.g. a stale client's own already-synced
+  // content merging back in on top of a freshly-seeded copy. A substantial
+  // paragraph (text between blank lines) showing up twice, byte-for-byte,
+  // isn't something real LaTeX content does by coincidence.
+  const paragraphs = content.split(/\n\s*\n/).map((p) => p.trim()).filter((p) => p.length >= 80);
+  const seenParagraphs = new Set();
+  for (const p of paragraphs) {
+    if (seenParagraphs.has(p)) return `trecho duplicado (${p.length} caracteres): "${p.slice(0, 60)}…"`;
+    seenParagraphs.add(p);
   }
   return null;
 }

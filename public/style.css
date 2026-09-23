@@ -515,6 +515,157 @@ button, input {
   line-height: 1.5;
 }
 
+/* --- AI chat panel --- */
+
+/* position: fixed (not a flex child) on purpose: the editor/preview split
+   already has a min-width on each side, so letting the chat panel compete
+   for flex space causes them to overflow it on narrower windows. Floating
+   it above the preview pane instead means opening the assistant never
+   reflows or breaks the rest of the layout. */
+.chat-panel {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 90vw;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  background: var(--surface-card);
+  border-left: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+}
+
+.chat-panel.open {
+  display: flex;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.chat-close-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.chat-close-btn:hover {
+  background: var(--surface-sunken);
+  color: var(--text-strong);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.chat-empty-hint {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.chat-msg {
+  max-width: 92%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-msg.user {
+  align-self: flex-end;
+  background: var(--chumbo);
+  color: var(--gelo);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.chat-msg.assistant {
+  align-self: flex-start;
+  background: var(--surface-sunken);
+  color: var(--text-body);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.chat-msg.assistant.pending::after {
+  content: "…";
+}
+
+.chat-msg.error {
+  align-self: flex-start;
+  background: rgba(240, 78, 68, 0.12);
+  color: var(--urucum);
+}
+
+.chat-msg code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: rgba(28, 33, 39, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.chat-msg.user code {
+  background: rgba(240, 240, 240, 0.18);
+}
+
+.chat-msg pre {
+  background: rgba(28, 33, 39, 0.08);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.chat-msg pre code {
+  background: none;
+  padding: 0;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.chat-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.chat-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.chat-send-btn {
+  align-self: flex-end;
+}
+
 /* --- PDF preview (rendered with PDF.js onto canvas, no native viewer chrome) --- */
 
 .preview-toolbar {

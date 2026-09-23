@@ -8,6 +8,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@hocuspocus/server": "^4.7.0",
     "adm-zip": "^0.6.1",
     "cookie-parser": "^1.4.7",
