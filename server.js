@@ -285,7 +285,7 @@ function broadcastCompileResult(id, result) {
 function getQueue(id) {
   let q = queues.get(id);
   if (!q) {
-    q = { latestContent: null, waiters: [], running: false };
+    q = { latestContent: null, waiters: [], running: false, seq: 0 };
     queues.set(id, q);
   }
   return q;
@@ -309,11 +309,13 @@ async function processQueue(id) {
     q.waiters = [];
     try {
       const result = await runCompile(id, contentToCompile);
+      result.seq = ++q.seq;
       currentWaiters.forEach((w) => w.resolve(result));
       broadcastCompileResult(id, result);
     } catch (err) {
+      const result = { success: false, log: String(err), seq: ++q.seq };
       currentWaiters.forEach((w) => w.reject(err));
-      broadcastCompileResult(id, { success: false, log: String(err) });
+      broadcastCompileResult(id, result);
     }
   }
   q.running = false;
@@ -719,7 +721,19 @@ app.get('/api/projects/:id/compile-events', (req, res) => {
   }
   subs.add(res);
 
+  // Some proxies/tunnels close a connection they consider idle — a ping
+  // comment every 20s (ignored by EventSource, since it has no "data:"
+  // line) keeps bytes flowing so that doesn't happen mid-session.
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(':ping\n\n');
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 20000);
+
   req.on('close', () => {
+    clearInterval(heartbeat);
     subs.delete(res);
   });
 });

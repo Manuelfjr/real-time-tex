@@ -224,15 +224,11 @@ async function tryLoadCachedPdf() {
   }
 }
 
-// Compile results (success or failure) are delivered over /compile-events
-// (see subscribeToCompileEvents below), not through this request's own
-// response — every connected viewer gets the same update that way, instead
-// of only whoever's request happens to come back first. With several
-// people editing the same live document, everyone's own edits trigger a
-// compile (see `cm.on('change', scheduleCompile)`), so a design where each
-// tab only trusts its own request left other viewers stuck waiting
-// whenever a slower or dropped connection (e.g. a free Cloudflare tunnel)
-// swallowed their particular response.
+// Every compile result carries a per-project sequence number (`seq`) from
+// the server, so whichever of the two paths below applies it first wins and
+// the other becomes a no-op instead of a redundant re-render.
+let lastAppliedCompileSeq = -1;
+
 async function compile() {
   dirty = false;
   setStatus('Compilando…');
@@ -243,11 +239,19 @@ async function compile() {
     // that buffer might currently be showing a different file (e.g. a
     // chapter opened from the sidebar), and sending it here would
     // overwrite main.tex with the wrong content.
-    await fetch(api('/compile'), {
+    const res = await fetch(api('/compile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
+    const result = await res.json();
+    // Applied directly here rather than waiting on the /compile-events
+    // broadcast (see subscribeToCompileEvents) — this is the one client
+    // that already knows for certain the compile finished, so it shouldn't
+    // depend on a second, separate connection to find out. Other viewers,
+    // who don't have a request of their own in flight, still get the
+    // update via that broadcast.
+    await handleCompileResult(result);
   } catch (err) {
     setStatus('Erro ao conectar com o servidor.', 'error');
     logPanel.classList.add('has-error');
@@ -260,7 +264,8 @@ async function compile() {
 
 // Stays open for the life of the tab (the browser's EventSource
 // auto-reconnects on drops), pushing every compile result — whoever
-// triggered it — to this viewer's preview pane.
+// triggered it — to this viewer's preview pane. Covers edits made by other
+// collaborators, which this tab has no request of its own to learn from.
 function subscribeToCompileEvents() {
   const source = new EventSource(api('/compile-events'));
   let connectedBefore = false;
@@ -280,6 +285,13 @@ function subscribeToCompileEvents() {
 }
 
 async function handleCompileResult(result) {
+  // `seq` is absent on the cached-PDF-on-join path (tryLoadCachedPdf), which
+  // doesn't come from the compile queue and has nothing to deduplicate
+  // against, so it's only checked when present.
+  if (typeof result.seq === 'number') {
+    if (result.seq <= lastAppliedCompileSeq) return;
+    lastAppliedCompileSeq = result.seq;
+  }
   logContent.textContent = result.log || '';
 
   if (result.success) {
