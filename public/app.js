@@ -163,10 +163,17 @@ function connectToFile(relPath, onReady) {
     url: `${wsProtocol}//${location.host}/collab`,
     name: `${PROJECT_ID}:${relPath}`,
     document: ydoc,
-    onSynced: () => {
+    onSynced: async () => {
       if (isMain && !firstSyncHandled) {
         firstSyncHandled = true;
-        compile();
+        // Show whatever was last compiled immediately instead of always
+        // forcing a fresh compile on join — for a big document that can
+        // take a while, and nothing changed since the last compile most of
+        // the time anyway. Edits still trigger a real recompile as normal;
+        // this only skips the redundant one when there's nothing new to
+        // show for it yet.
+        const cached = await tryLoadCachedPdf();
+        if (!cached) compile();
       }
       if (onReady) onReady();
     },
@@ -197,6 +204,35 @@ function updateActiveFileUI() {
 
 mainFileRow.addEventListener('click', () => connectToFile(mainFileRel));
 
+// Loads whatever PDF is already sitting on disk (from an earlier compile —
+// by this session or anyone else's), if any. Used on first connect so
+// joining a project with a big, slow-to-compile document shows something
+// immediately instead of forcing everyone through a fresh compile every
+// time someone opens it.
+async function tryLoadCachedPdf() {
+  try {
+    const head = await fetch(api('/output.pdf'), { method: 'HEAD' });
+    if (!head.ok) return false;
+    await renderPdf(api('/output.pdf') + '?t=' + Date.now());
+    pdfLoaded = true;
+    pdfPlaceholder.classList.add('hidden');
+    pageIndicator.classList.remove('hidden');
+    setStatus('Compilado ✓', 'ok');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Compile results (success or failure) are delivered over /compile-events
+// (see subscribeToCompileEvents below), not through this request's own
+// response — every connected viewer gets the same update that way, instead
+// of only whoever's request happens to come back first. With several
+// people editing the same live document, everyone's own edits trigger a
+// compile (see `cm.on('change', scheduleCompile)`), so a design where each
+// tab only trusts its own request left other viewers stuck waiting
+// whenever a slower or dropped connection (e.g. a free Cloudflare tunnel)
+// swallowed their particular response.
 async function compile() {
   dirty = false;
   setStatus('Compilando…');
@@ -207,13 +243,11 @@ async function compile() {
     // that buffer might currently be showing a different file (e.g. a
     // chapter opened from the sidebar), and sending it here would
     // overwrite main.tex with the wrong content.
-    const res = await fetch(api('/compile'), {
+    await fetch(api('/compile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    const result = await res.json();
-    await handleCompileResult(result);
   } catch (err) {
     setStatus('Erro ao conectar com o servidor.', 'error');
     logPanel.classList.add('has-error');
@@ -222,6 +256,27 @@ async function compile() {
   } finally {
     compileBtn.disabled = false;
   }
+}
+
+// Stays open for the life of the tab (the browser's EventSource
+// auto-reconnects on drops), pushing every compile result — whoever
+// triggered it — to this viewer's preview pane.
+function subscribeToCompileEvents() {
+  const source = new EventSource(api('/compile-events'));
+  let connectedBefore = false;
+  source.addEventListener('open', () => {
+    // A reconnect (not the first connection) means we may have missed a
+    // broadcast while offline — catch up on whatever's current now.
+    if (connectedBefore) tryLoadCachedPdf();
+    connectedBefore = true;
+  });
+  source.onmessage = (evt) => {
+    try {
+      handleCompileResult(JSON.parse(evt.data));
+    } catch {
+      // ignore malformed data
+    }
+  };
 }
 
 async function handleCompileResult(result) {
@@ -1004,3 +1059,4 @@ chatInput.addEventListener('keydown', (e) => {
 logPanel.classList.add('collapsed');
 loadProjectName();
 fetchFiles();
+subscribeToCompileEvents();

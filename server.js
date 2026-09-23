@@ -256,6 +256,32 @@ function buildFileTree(id, dirAbs, dirRel) {
 // means compiling one project never blocks or races with another. ---
 const queues = new Map(); // id -> { latestContent, waiters, running }
 
+// SSE subscribers per project — every connected client (whether or not it's
+// the one whose edit triggered this particular compile) gets the result
+// pushed here. This is what lets a second/third viewer's preview update
+// even when their own browser tab never personally called /compile: with
+// several people editing the same live document, every one of them fires a
+// compile on each change (see app.js's `cm.on('change', scheduleCompile)`),
+// so whoever's request actually reaches the front of the queue "wins" and
+// the others would otherwise just wait on their own now-redundant request —
+// which, over a flaky connection (e.g. a free Cloudflare tunnel), can hang
+// long enough to look stuck. Broadcasting means nobody's view depends on
+// their own request making it back in one piece.
+const compileSubscribers = new Map(); // id -> Set<res>
+
+function broadcastCompileResult(id, result) {
+  const subs = compileSubscribers.get(id);
+  if (!subs || subs.size === 0) return;
+  const payload = `data: ${JSON.stringify(result)}\n\n`;
+  for (const res of subs) {
+    try {
+      res.write(payload);
+    } catch {
+      subs.delete(res);
+    }
+  }
+}
+
 function getQueue(id) {
   let q = queues.get(id);
   if (!q) {
@@ -284,8 +310,10 @@ async function processQueue(id) {
     try {
       const result = await runCompile(id, contentToCompile);
       currentWaiters.forEach((w) => w.resolve(result));
+      broadcastCompileResult(id, result);
     } catch (err) {
       currentWaiters.forEach((w) => w.reject(err));
+      broadcastCompileResult(id, { success: false, log: String(err) });
     }
   }
   q.running = false;
@@ -672,6 +700,29 @@ function flattenSyncTex(node, acc, includeBlocks) {
   }
   (node.blocks || []).forEach((b) => flattenSyncTex(b, acc, includeBlocks));
 }
+
+// Push channel for compile results — see the comment above compileSubscribers.
+app.get('/api/projects/:id/compile-events', (req, res) => {
+  const id = req.params.id;
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.flushHeaders();
+  res.write(':ok\n\n'); // comment line — opens the stream immediately, no event
+
+  let subs = compileSubscribers.get(id);
+  if (!subs) {
+    subs = new Set();
+    compileSubscribers.set(id, subs);
+  }
+  subs.add(res);
+
+  req.on('close', () => {
+    subs.delete(res);
+  });
+});
 
 app.post('/api/projects/:id/sync', (req, res) => {
   const { page, x, y } = req.body || {};
