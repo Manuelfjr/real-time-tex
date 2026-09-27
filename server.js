@@ -1094,7 +1094,7 @@ async function aiMutateDocument(projectId, rel, mutate) {
         return;
       }
       const after = result.after;
-      const reason = detectDuplication(after, before, isMain);
+      const reason = detectDuplication(after, before, isMain, true);
       if (reason) {
         outcome = { error: `Alteração recusada: o resultado parece o arquivo duplicado (${reason}).` };
         return;
@@ -1669,10 +1669,28 @@ function duplicatedParagraphs(content) {
   return dupes;
 }
 
-function detectDuplication(content, previous, isMainFile) {
-  const classes = (t) => (t.match(/\\documentclass/g) || []).length;
+// Conta só os \documentclass que valem: linhas comentadas (%\documentclass…)
+// não contam — templates como o da Springer trazem uma dúzia delas.
+function activeDocumentclassCount(t) {
+  let n = 0;
+  for (const line of String(t).split('\n')) {
+    const code = line.replace(/(^|[^\\])%.*$/, '$1');
+    n += (code.match(/\\documentclass/g) || []).length;
+  }
+  return n;
+}
+
+// intentional: escrita pedida (assistente). Aí só vale o sinal real do bug de
+// colaboração: o conteúdo anterior aparecendo inteiro duas vezes.
+function detectDuplication(content, previous, isMainFile, intentional = false) {
+  const classes = activeDocumentclassCount;
   if (isMainFile && classes(content) > Math.max(1, classes(previous))) {
     return `\\documentclass aparece ${classes(content)}x`;
+  }
+  if (intentional) {
+    const prev = String(previous || '').trim();
+    if (prev.length >= 200 && content.split(prev).length - 1 >= 2) return 'o conteúdo anterior aparece duas vezes';
+    return null;
   }
   const already = duplicatedParagraphs(previous);
   const fresh = [...duplicatedParagraphs(content)].filter((p) => !already.has(p));
