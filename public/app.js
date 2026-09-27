@@ -213,7 +213,7 @@ mainFileRow.addEventListener('click', () => connectToFile(mainFileRel));
 async function tryLoadCachedPdf() {
   try {
     const head = await fetch(api('/output.pdf'), { method: 'HEAD' });
-    if (!head.ok) return false;
+    if (head.status !== 200) return false; // 204 = ainda não há PDF
     await renderPdf(api('/output.pdf') + '?t=' + Date.now());
     pdfLoaded = true;
     pdfPlaceholder.classList.add('hidden');

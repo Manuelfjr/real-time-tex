@@ -690,6 +690,9 @@ app.post('/api/projects/:id/compile', async (req, res) => {
 app.get('/api/projects/:id/output.pdf', (req, res) => {
   const file = pdfPath(req.params.id);
   if (!fs.existsSync(file)) {
+    // HEAD é só a checagem do editor ao abrir ("já existe PDF?"): responde sem
+    // erro (204) para o navegador não registrar um 404 no console.
+    if (req.method === 'HEAD') return res.status(204).end();
     return res.status(404).send('PDF ainda não gerado.');
   }
   res.set('Cache-Control', 'no-store');
