@@ -1066,3 +1066,9 @@ button, input {
 .rede-opts input { margin-top: 3px; accent-color: var(--urucum); }
 .rede-go { width: 100%; }
 .rede-err { color: #9c1f16; font-size: 12.5px; margin: 0; }
+
+/* --- Colunas redimensionáveis --- */
+.divider { touch-action: none; }
+.file-sidebar.collapsed { width: 0 !important; border-right: 0; overflow: hidden; }
+body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
+body.resizing .pdf-viewer, body.resizing .CodeMirror { pointer-events: none; }

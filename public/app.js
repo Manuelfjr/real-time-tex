@@ -591,24 +591,61 @@ const editorPane = document.querySelector('.editor-pane');
 const previewPane = document.querySelector('.preview-pane');
 const splitArea = document.getElementById('split-area');
 
-let dragging = false;
-divider.addEventListener('mousedown', () => {
-  dragging = true;
-  document.body.style.cursor = 'col-resize';
-});
-window.addEventListener('mousemove', (e) => {
-  if (!dragging) return;
-  const rect = splitArea.getBoundingClientRect();
-  const pct = Math.min(80, Math.max(20, ((e.clientX - rect.left) / rect.width) * 100));
+// Arrastar com pointer events (mouse, trackpad e toque); a posição fica salva
+// no navegador. Durante o arrasto, PDF e editor não capturam o ponteiro.
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* armazenamento indisponível */ } },
+};
+
+function makeResizer(handle, onMove, onDone) {
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    document.body.classList.add('resizing');
+    const move = (ev) => onMove(ev.clientX);
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      document.body.classList.remove('resizing');
+      onDone();
+      cm.refresh();
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  });
+}
+
+// Código × PDF (porcentagem da área).
+function applySplit(pct) {
   editorPane.style.flex = `0 0 ${pct}%`;
   previewPane.style.flex = `0 0 ${100 - pct}%`;
-});
-window.addEventListener('mouseup', () => {
-  if (dragging) {
-    dragging = false;
-    document.body.style.cursor = '';
-    cm.refresh();
-  }
+}
+let splitPct = Number(store.get('latexlive-split')) || 0;
+if (splitPct) applySplit(splitPct);
+makeResizer(divider, (x) => {
+  const rect = splitArea.getBoundingClientRect();
+  splitPct = Math.min(85, Math.max(15, ((x - rect.left) / rect.width) * 100));
+  applySplit(splitPct);
+}, () => store.set('latexlive-split', String(splitPct)));
+divider.addEventListener('dblclick', () => { splitPct = 50; applySplit(50); store.set('latexlive-split', '50'); cm.refresh(); });
+
+// Arquivos × código (largura da barra lateral, em px).
+const sidebarDivider = document.getElementById('sidebar-divider');
+let sidebarW = Number(store.get('latexlive-sidebar-w')) || 220;
+fileSidebar.style.width = `${sidebarW}px`;
+if (store.get('latexlive-sidebar-collapsed') === '1') fileSidebar.classList.add('collapsed');
+makeResizer(sidebarDivider, (x) => {
+  fileSidebar.classList.remove('collapsed');
+  sidebarW = Math.min(560, Math.max(140, x - fileSidebar.getBoundingClientRect().left));
+  fileSidebar.style.width = `${sidebarW}px`;
+}, () => { store.set('latexlive-sidebar-w', String(Math.round(sidebarW))); store.set('latexlive-sidebar-collapsed', '0'); });
+sidebarDivider.addEventListener('dblclick', () => {
+  const collapsed = fileSidebar.classList.toggle('collapsed');
+  store.set('latexlive-sidebar-collapsed', collapsed ? '1' : '0');
+  cm.refresh();
 });
 
 // ------------------------------------------------------------------
@@ -876,6 +913,15 @@ function buildTreeNode(node) {
       });
       actions.appendChild(insertRef);
     }
+    // 📌 compilar este .tex (vira o arquivo principal), como o "Main document" do Overleaf.
+    if (extOf(node.name) === 'tex' && node.path !== mainFileRel) {
+      const pin = document.createElement('span');
+      pin.className = 'tree-action';
+      pin.textContent = '📌';
+      pin.title = 'Compilar este arquivo (usar como principal)';
+      pin.addEventListener('click', (e) => { e.stopPropagation(); setMainFile(node.path); });
+      actions.appendChild(pin);
+    }
     actions.appendChild(rename);
     actions.appendChild(del);
 
@@ -897,6 +943,20 @@ function buildTreeNode(node) {
   }
 
   return li;
+}
+
+async function setMainFile(relPath) {
+  try {
+    const res = await fetch(api('/main'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: relPath }) });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+    mainFileRel = data.mainFile;
+    updateActiveFileUI();
+    fetchFiles();
+    setStatus(data.warning ? `Principal: ${mainFileRel} (${data.warning})` : `Compilando ${mainFileRel}…`, data.warning ? 'error' : undefined);
+  } catch (err) {
+    setStatus(`Não deu para trocar o arquivo principal: ${err.message}`, 'error');
+  }
 }
 
 async function uploadFiles(fileListLike, folder) {

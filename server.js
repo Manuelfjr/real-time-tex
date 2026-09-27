@@ -662,6 +662,26 @@ app.post('/api/projects/:id/folders', (req, res) => {
   }
 });
 
+// Arquivo principal (o que é compilado), como o "Main document" do Overleaf:
+// qualquer .tex do projeto pode virar o principal.
+app.post('/api/projects/:id/main', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { abs, rel } = resolveProjectPath(id, (req.body || {}).path);
+    if (!rel || path.extname(rel).toLowerCase() !== '.tex') return res.status(400).json({ success: false, error: 'Escolha um arquivo .tex.' });
+    if (!fs.existsSync(abs)) return res.status(404).json({ success: false, error: 'Arquivo não encontrado.' });
+    const hasClass = /\\documentclass/.test(fs.readFileSync(abs, 'utf8'));
+    const meta = readProjectMeta(id);
+    meta.mainFile = rel;
+    writeProjectMeta(id, meta);
+    touchProject(id);
+    requestCompile(id).catch(() => {});
+    res.json({ success: true, mainFile: rel, warning: hasClass ? null : 'Esse arquivo não tem \\documentclass; a compilação provavelmente vai falhar.' });
+  } catch (err) {
+    res.status(400).json({ success: false, error: String((err && err.message) || err) });
+  }
+});
+
 app.post('/api/projects/:id/rename', (req, res) => {
   try {
     const { id } = req.params;
@@ -834,7 +854,8 @@ app.post('/api/projects/:id/sync', (req, res) => {
 // password, so cost per message matters more than squeezing out the last bit
 // of quality, and Haiku is already strong for LaTeX/writing help.
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
-const CHAT_MODEL = 'claude-haiku-4-5-20251001';
+// Modelo do assistente: Haiku por custo; LATEX_CHAT_MODEL troca (ex.: claude-sonnet-5, mais confiável em edições grandes).
+const CHAT_MODEL = process.env.LATEX_CHAT_MODEL || 'claude-haiku-4-5-20251001';
 const CHAT_MAX_TOKENS = 8192; // room for an edit_file/create_file carrying a whole section
 const CHAT_RATE_LIMIT_PER_MIN = 20; // server-wide — guards against a runaway loop eating the budget, not against these specific trusted users
 
@@ -1051,6 +1072,32 @@ async function aiMutateDocument(projectId, rel, mutate) {
   return outcome;
 }
 
+// Acha old_text no arquivo. Primeiro a busca exata; se falhar, uma busca que
+// ignora diferenças de espaço e de quebra de linha (\r\n × \n, espaços no fim
+// da linha, tabs, espaço não separável) — o assistente costuma copiar o trecho
+// quase igual, e a edição falhava por um detalhe invisível.
+function aiFindSpan(current, oldText) {
+  const exact = countOccurrences(current, oldText);
+  if (exact > 0) {
+    const start = current.indexOf(oldText);
+    return { count: exact, start, end: start + oldText.length };
+  }
+  const tokens = oldText.trim().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return { count: 0 };
+  const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(tokens.map(esc).join('\\s+'), 'g');
+  const hits = [...current.matchAll(re)];
+  if (hits.length !== 1) return { count: hits.length };
+  return { count: 1, start: hits[0].index, end: hits[0].index + hits[0][0].length };
+}
+
+// Mantém o estilo de quebra de linha do arquivo (Windows \r\n ou \n).
+function aiMatchEol(current, text) {
+  const crlf = current.includes('\r\n');
+  const lf = String(text).replace(/\r\n/g, '\n');
+  return crlf ? lf.replace(/\n/g, '\r\n') : lf;
+}
+
 function countOccurrences(haystack, needle) {
   let count = 0;
   for (let i = haystack.indexOf(needle); i !== -1; i = haystack.indexOf(needle, i + 1)) count++;
@@ -1118,6 +1165,20 @@ const AI_TOOLS = [
         new_text: { type: 'string' },
       },
       required: ['path', 'old_text', 'new_text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'write_file',
+    description:
+      'Substitui o conteúdo INTEIRO de um arquivo existente. Use quando o pedido é reformatar, reorganizar ou reescrever ' +
+      'o arquivo todo (ou a maior parte dele); para trechos pontuais, prefira edit_file. Leia o arquivo com read_file antes ' +
+      'e mande o arquivo completo em content, sem omitir nada que deva continuar lá.',
+    eager_input_streaming: true,
+    input_schema: {
+      type: 'object',
+      properties: { path: { type: 'string' }, content: { type: 'string' } },
+      required: ['path', 'content'],
       additionalProperties: false,
     },
   },
@@ -1209,6 +1270,8 @@ function aiValidateInput(name, input) {
       return isStr(input.path) && isStr(input.old_text) && input.old_text.length > 0 && isStr(input.new_text)
         ? null
         : 'Parâmetros inválidos (path, old_text e new_text são obrigatórios).';
+    case 'write_file':
+      return isStr(input.path) && isStr(input.content) && input.content.length > 0 ? null : 'Parâmetros inválidos (path e content são obrigatórios).';
     case 'create_file':
       return isStr(input.path) && isStr(input.content) ? null : 'Parâmetros inválidos (path e content são obrigatórios).';
     default:
@@ -1297,10 +1360,11 @@ async function aiRunTool(projectId, name, input) {
         throw new Error(`"${rel}" não existe — use create_file para criar.`);
       }
       const outcome = await aiMutateDocument(projectId, rel, (current) => {
-        const n = countOccurrences(current, input.old_text);
-        if (n === 0) return { error: 'old_text não foi encontrado no arquivo. Leia o arquivo de novo com read_file e copie o trecho exato.' };
-        if (n > 1) return { error: `old_text aparece ${n} vezes no arquivo. Inclua mais linhas vizinhas para torná-lo único.` };
-        return { after: current.replace(input.old_text, () => input.new_text) };
+        const hit = aiFindSpan(current, input.old_text);
+        if (hit.count === 0) return { error: 'old_text não foi encontrado no arquivo. Leia o arquivo de novo com read_file e copie o trecho; se for mudar o arquivo quase todo, use write_file. Não crie outro arquivo no lugar.' };
+        if (hit.count > 1) return { error: `old_text aparece ${hit.count} vezes no arquivo. Inclua mais linhas vizinhas para torná-lo único.` };
+        const replacement = aiMatchEol(current, input.new_text);
+        return { after: current.slice(0, hit.start) + replacement + current.slice(hit.end) };
       });
       if (outcome.error) throw new Error(outcome.error);
       const editId = rememberAiEdit({
@@ -1309,6 +1373,17 @@ async function aiRunTool(projectId, name, input) {
         oldText: input.old_text, newText: input.new_text,
       });
       return { content: `Alteração aplicada em ${rel}.`, event: { name, status: 'ok', path: rel, editId } };
+    }
+
+    if (name === 'write_file') {
+      const { abs, rel } = aiResolveTextFile(projectId, input.path);
+      if (!fs.existsSync(abs) && !hocuspocus.documents.has(aiDocName(projectId, rel))) {
+        throw new Error(`"${rel}" não existe — use create_file para criar um arquivo novo.`);
+      }
+      const outcome = await aiMutateDocument(projectId, rel, (current) => ({ after: aiMatchEol(current, input.content) }));
+      if (outcome.error) throw new Error(outcome.error);
+      const editId = rememberAiEdit({ projectId, rel, abs, kind: 'edit', before: outcome.before, after: outcome.after });
+      return { content: `Arquivo ${rel} reescrito por inteiro.`, event: { name: 'edit_file', status: 'ok', path: rel, editId } };
     }
 
     if (name === 'create_file') {
@@ -1358,6 +1433,11 @@ app.post('/api/projects/:id/chat', async (req, res) => {
     'arquivos com edit_file/create_file em vez de só mostrar o código. Leia o trecho com read_file antes de editar.\n' +
     '- Para perguntas sobre o documento como um todo (estrutura, capítulos, referências, \\label/\\ref), consulte os ' +
     'arquivos relevantes em vez de supor o conteúdo.\n' +
+    '- Para reformatar, reorganizar ou reescrever o arquivo todo, use write_file com o arquivo completo. Para trechos, ' +
+    'use edit_file.\n' +
+    '- NUNCA crie um arquivo novo para contornar uma edição que falhou (ex.: main_temp.tex). Se edit_file falhar, leia ' +
+    'o arquivo de novo e tente outra vez, ou use write_file no próprio arquivo. Só use create_file quando o usuário ' +
+    'pedir um arquivo novo (um capítulo, por exemplo).\n' +
     '- Faça alterações pontuais e mínimas; não reescreva partes que o usuário não pediu. Preserve o estilo e os ' +
     'pacotes já usados no projeto.\n' +
     '- Ao terminar, diga em uma ou duas frases o que foi alterado e em qual arquivo. O usuário pode desfazer cada ' +
