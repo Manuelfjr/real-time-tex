@@ -21,6 +21,10 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 
+# A senha pode vir do .env (recomendado: fora do git e do histórico do terminal).
+if [ -z "${SITE_PASSWORD:-}" ] && [ -f .env ]; then
+  SITE_PASSWORD="$({ grep -E '^SITE_PASSWORD=' .env || true; } | tail -n1 | cut -d= -f2- | sed -e "s/^[\"']//" -e "s/[\"']$//")"
+fi
 export SITE_PASSWORD="${SITE_PASSWORD:-tese2026}"
 export PORT="${PORT:-4173}"
 TUNNEL="${TUNNEL:-on}"
@@ -60,7 +64,11 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-echo "Senha de acesso: $SITE_PASSWORD"
+if [ "$SITE_PASSWORD" = "tese2026" ]; then
+  echo "Senha de acesso: a padrão (tese2026) — defina SITE_PASSWORD no .env para trocá-la"
+else
+  echo "Senha de acesso: definida (não exibida)"
+fi
 echo "Logs em:         $LOG_DIR/"
 echo "Link atual em:   $URL_FILE (atualizado a cada (re)início)"
 echo "Ctrl+C para encerrar de vez."

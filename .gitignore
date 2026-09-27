@@ -7,3 +7,4 @@ projects/*/.yjs/
 .DS_Store
 .run-logs/
 tunnel-url.txt
+.env

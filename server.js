@@ -15,6 +15,12 @@ const Y = require('yjs');
 const nodeAdapter = require('crossws/adapters/node').default;
 const synctexParser = require('./lib/synctex-parser');
 
+// Configuração opcional num .env ao lado deste arquivo (fora do git): chave da
+// Anthropic, senha, AUTH_SECRET etc. Variáveis já definidas no ambiente valem
+// mais que o arquivo.
+const ENV_FILE = path.join(__dirname, '.env');
+if (fs.existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
+
 const PORT = process.env.PORT || 4173;
 const ROOT_DIR = __dirname;
 // Overridable so a deployment with persistent storage (e.g. a mounted
