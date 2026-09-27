@@ -1056,6 +1056,10 @@ function toolLabel(tool) {
   switch (tool.name) {
     case 'list_projects':
       return '🗂️ Viu a lista de projetos';
+    case 'search_network_papers':
+      return `🌐 Buscou na rede KORPUS “${tool.detail || ''}”`;
+    case 'read_network_paper':
+      return `📑 Leu da rede: ${tool.detail || ''}`;
     case 'list_files':
       return tool.project ? `📂 Viu os arquivos de “${tool.project}”` : '📂 Viu os arquivos do projeto';
     case 'read_file':
@@ -1076,6 +1080,8 @@ function toolErrorLabel(tool) {
   const what = {
     read_file: `Não conseguiu ler ${p}`,
     search_project: 'A busca falhou',
+    search_network_papers: 'A busca na rede KORPUS falhou',
+    read_network_paper: 'Não conseguiu ler o paper da rede',
     edit_file: `Não conseguiu alterar ${p}`,
     create_file: `Não conseguiu criar ${p}`,
   }[tool.name];

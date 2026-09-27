@@ -34,6 +34,10 @@ const PROJECTS_ROOT = process.env.PROJECTS_DIR || path.join(ROOT_DIR, 'projects'
 // reachable by other people, not as strong access control on its own.
 const SITE_PASSWORD = process.env.SITE_PASSWORD || '';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+// Opcional: papers de uma rede KORPUS (KUNUMI Papers) para o assistente
+// consultar e citar. Só leitura; sem as duas variáveis, nada muda.
+const KORPUS_URL = String(process.env.KORPUS_URL || '').replace(/\/+$/, '');
+const KORPUS_TOKEN = process.env.KORPUS_TOKEN || '';
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 const AUTH_COOKIE = 'latex_live_auth';
 
@@ -1053,6 +1057,52 @@ const AI_TOOLS = [
   },
 ];
 
+const KORPUS_TOOLS = [
+  {
+    name: 'search_network_papers',
+    description:
+      'Busca papers na rede KORPUS da KUNUMI: trabalhos dos pesquisadores da casa e literatura acompanhada (arXiv, ' +
+      'Semantic Scholar). Busca por palavras-chave (use termos do tema, em português ou inglês; faça várias buscas se ' +
+      'preciso). Sem query, devolve a rede inteira resumida. Retorna id, título, autores, ano, origem e TL;DR.',
+    input_schema: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'Palavras-chave; vazio = rede inteira.' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'read_network_paper',
+    description:
+      'Detalhes de um paper da rede KORPUS pelo id (de search_network_papers): resumo, contribuições, métodos, link e ' +
+      'uma entrada BibTeX pronta para citar.',
+    input_schema: {
+      type: 'object',
+      properties: { id: { type: 'string', minLength: 1 } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+];
+const korpusEnabled = () => !!(KORPUS_URL && KORPUS_TOKEN);
+const aiTools = () => (korpusEnabled() ? [...AI_TOOLS, ...KORPUS_TOOLS] : AI_TOOLS);
+
+async function korpusGet(pathAndQuery) {
+  const res = await fetch(`${KORPUS_URL}${pathAndQuery}`, {
+    headers: { Authorization: `Bearer ${KORPUS_TOKEN}`, 'ngrok-skip-browser-warning': '1' },
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Rede KORPUS respondeu ${res.status}${data.error ? `: ${data.error}` : ''}`);
+  return data;
+}
+
+function korpusBrief(p) {
+  const meta = [p.authors && p.authors.slice(0, 4).join(', ') + (p.authors.length > 4 ? ' et al.' : ''), p.year,
+    p.source === 'kunumi' ? `trabalho da KUNUMI (${p.status})` : p.source, Number.isFinite(p.citations) ? `${p.citations} citações` : '']
+    .filter(Boolean).join(' · ');
+  return `[${p.id}] ${p.title}\n  ${meta}${p.tldr ? `\n  ${p.tldr}` : ''}`;
+}
+
 // eager_input_streaming means the API no longer validates tool input, so every
 // call is checked here before it runs.
 function aiValidateInput(name, input) {
@@ -1064,6 +1114,10 @@ function aiValidateInput(name, input) {
     case 'list_projects':
     case 'list_files':
       return null;
+    case 'search_network_papers':
+      return input.query === undefined || isStr(input.query) ? null : 'Parâmetros inválidos.';
+    case 'read_network_paper':
+      return isStr(input.id) && input.id.length > 0 ? null : 'Parâmetros inválidos (id é obrigatório).';
     case 'read_file':
       return isStr(input.path) && isOptInt(input.start_line) && isOptInt(input.end_line) ? null : 'Parâmetros inválidos.';
     case 'search_project':
@@ -1088,6 +1142,25 @@ async function aiRunTool(projectId, name, input) {
   try {
     if (name === 'list_projects') {
       return { content: aiFormatProjectList(projectId), event: { name, status: 'ok' } };
+    }
+
+    if (name === 'search_network_papers' || name === 'read_network_paper') {
+      if (!korpusEnabled()) throw new Error('Rede KORPUS não configurada neste servidor.');
+      if (name === 'search_network_papers') {
+        const q = String(input.query || '').trim();
+        const data = await korpusGet(`/api/korpus/papers${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+        const head = q ? `${data.papers.length} paper(s) para "${q}" (rede com ${data.total})` : `Rede inteira: ${data.total} paper(s)`;
+        const content = data.papers.length ? `${head}\n\n${data.papers.map(korpusBrief).join('\n\n')}` : `${head}. Tente outras palavras-chave.`;
+        return { content, event: { name, status: 'ok', detail: q || 'rede inteira' } };
+      }
+      const p = await korpusGet(`/api/korpus/papers/${encodeURIComponent(input.id)}`);
+      const list = (xs) => (xs && xs.length ? xs.map((x) => `- ${x}`).join('\n') : '—');
+      const content = [
+        `${p.title}`, `Autores: ${(p.authors || []).join(', ')}`, `Ano: ${p.year || '—'} · Origem: ${p.source}${p.venue ? ` · ${p.venue}` : ''}`,
+        p.url ? `Link: ${p.url}` : '', p.tldr ? `TL;DR: ${p.tldr}` : '', p.summary ? `Resumo: ${p.summary}` : '',
+        `Contribuições:\n${list(p.contributions)}`, `Métodos:\n${list(p.methods)}`, `BibTeX:\n${p.bibtex}`,
+      ].filter(Boolean).join('\n');
+      return { content, event: { name, status: 'ok', detail: p.title } };
     }
 
     // Alterar outro projeto não é permitido: recusa em vez de gravar por engano no aberto.
@@ -1212,7 +1285,14 @@ app.post('/api/projects/:id/chat', async (req, res) => {
       ? `A compilação roda na pasta ${path.dirname(mainRel)}/, então caminhos em \\input, \\include, \\includegraphics e \\bibliography são relativos a ela (não à raiz do projeto).\n\n`
       : '\n') +
     `Arquivos do projeto:\n${aiFormatFileList(aiListFiles(projectId), 300)}\n\n` +
-    `Projetos do usuário:\n${aiFormatProjectList(projectId)}`;
+    `Projetos do usuário:\n${aiFormatProjectList(projectId)}` +
+    (korpusEnabled()
+      ? '\n\nRede KORPUS da KUNUMI: com search_network_papers e read_network_paper você consulta os trabalhos dos ' +
+        'pesquisadores da casa e a literatura acompanhada. Use-a para sugerir referências e trabalhos relacionados, ' +
+        'comparar abordagens e citar. Para citar, acrescente a entrada BibTeX de read_network_paper ao .bib do projeto ' +
+        '(edit_file; se não houver .bib, pergunte antes de criar) e use \\cite{chave}. Não invente papers: cite só o ' +
+        'que as ferramentas retornarem.'
+      : '');
 
   if (typeof file === 'string') {
     try {
@@ -1266,7 +1346,7 @@ app.post('/api/projects/:id/chat', async (req, res) => {
         max_tokens: CHAT_MAX_TOKENS,
         cache_control: { type: 'ephemeral' },
         system: systemPrompt,
-        tools: AI_TOOLS,
+        tools: aiTools(),
         messages: convo,
       });
       currentStream = stream;
