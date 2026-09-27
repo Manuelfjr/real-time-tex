@@ -40,7 +40,9 @@ else
 fi
 
 echo "== cloudflared =="
-if ! command -v cloudflared >/dev/null 2>&1; then
+if [ "${TUNNEL:-on}" = "off" ]; then
+  echo "pulado (TUNNEL=off)"
+elif ! command -v cloudflared >/dev/null 2>&1; then
   case "$(uname -m)" in
     x86_64) arch="amd64" ;;
     aarch64|arm64) arch="arm64" ;;

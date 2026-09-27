@@ -476,6 +476,14 @@ const app = express();
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 
+// Atrás de um proxy que publica o app num subcaminho (ex.: /latex), o proxy
+// informa o prefixo em X-Forwarded-Prefix; os redirecionamentos o respeitam.
+// Rodando direto (sem proxy), o prefixo é vazio e nada muda.
+function basePath(req) {
+  const p = String(req.get('x-forwarded-prefix') || '').trim();
+  return /^\/[A-Za-z0-9_\-/]*$/.test(p) ? p.replace(/\/+$/, '') : '';
+}
+
 app.use((req, res, next) => {
   if (!SITE_PASSWORD) return next(); // gate disabled — local/dev default
   if (req.path === '/login') return next();
@@ -483,7 +491,7 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(401).json({ success: false, error: 'Não autenticado.' });
   }
-  res.redirect('/login');
+  res.redirect(`${basePath(req)}/login`);
 });
 
 app.get('/login', (req, res) => {
@@ -497,14 +505,14 @@ app.post('/login', (req, res) => {
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
-    return res.redirect('/');
+    return res.redirect(`${basePath(req)}/`);
   }
-  res.redirect('/login?error=1');
+  res.redirect(`${basePath(req)}/login?error=1`);
 });
 
 app.post('/logout', (req, res) => {
   res.clearCookie(AUTH_COOKIE);
-  res.redirect('/login');
+  res.redirect(`${basePath(req)}/login`);
 });
 
 app.use(express.json({ limit: '20mb' }));

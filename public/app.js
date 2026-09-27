@@ -11,7 +11,8 @@ if (!PROJECT_ID) {
   location.href = 'index.html';
   throw new Error('Nenhum projeto selecionado.');
 }
-const api = (p) => `/api/projects/${encodeURIComponent(PROJECT_ID)}${p}`;
+// Caminhos relativos: o app funciona na raiz ou sob um subcaminho (ex.: /latex/).
+const api = (p) => `api/projects/${encodeURIComponent(PROJECT_ID)}${p}`;
 
 const DEBOUNCE_MS = 700;
 
@@ -160,7 +161,7 @@ function connectToFile(relPath, onReady) {
   const isMain = relPath === mainFileRel;
 
   const provider = new HocuspocusProvider({
-    url: `${wsProtocol}//${location.host}/collab`,
+    url: `${wsProtocol}//${location.host}${location.pathname.replace(/[^/]*$/, '')}collab`,
     name: `${PROJECT_ID}:${relPath}`,
     document: ydoc,
     onSynced: async () => {

@@ -31,7 +31,7 @@ function setImportStatus(text, kind) {
 
 async function fetchProjects() {
   try {
-    const res = await fetch('/api/projects');
+    const res = await fetch('api/projects');
     const data = await res.json();
     renderProjects(data.projects || []);
   } catch (err) {
@@ -112,7 +112,7 @@ async function renameProject(project) {
   const newName = prompt('Novo nome do projeto:', project.name);
   if (!newName || newName === project.name) return;
   try {
-    await fetch(`/api/projects/${encodeURIComponent(project.id)}`, {
+    await fetch(`api/projects/${encodeURIComponent(project.id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newName }),
@@ -125,7 +125,7 @@ async function renameProject(project) {
 async function deleteProject(project) {
   if (!confirm(`Excluir o projeto "${project.name}"? Essa ação não pode ser desfeita.`)) return;
   try {
-    await fetch(`/api/projects/${encodeURIComponent(project.id)}`, { method: 'DELETE' });
+    await fetch(`api/projects/${encodeURIComponent(project.id)}`, { method: 'DELETE' });
   } finally {
     fetchProjects();
   }
@@ -135,7 +135,7 @@ newProjectBtn.addEventListener('click', async () => {
   const name = prompt('Nome do novo projeto:', 'Documento sem título');
   if (!name) return;
   try {
-    const res = await fetch('/api/projects', {
+    const res = await fetch('api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
@@ -157,7 +157,7 @@ async function importZip(file) {
   const formData = new FormData();
   formData.append('zip', file);
   try {
-    const res = await fetch('/api/projects/import', { method: 'POST', body: formData });
+    const res = await fetch('api/projects/import', { method: 'POST', body: formData });
     const data = await res.json();
     if (!data.success) {
       setImportStatus('Falha ao importar: ' + (data.error || 'erro desconhecido'), 'error');

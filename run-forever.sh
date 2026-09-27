@@ -15,12 +15,15 @@
 # Uso:
 #   ./run-forever.sh
 #   SITE_PASSWORD=outrasenha ./run-forever.sh
+#   TUNNEL=off ./run-forever.sh   # só o servidor, sem túnel da Cloudflare (ex.:
+#                                 # quando outro app publica este por um proxy)
 
 set -uo pipefail
 cd "$(dirname "$0")"
 
 export SITE_PASSWORD="${SITE_PASSWORD:-tese2026}"
 export PORT="${PORT:-4173}"
+TUNNEL="${TUNNEL:-on}"
 
 LOG_DIR="./.run-logs"
 URL_FILE="./tunnel-url.txt"
@@ -30,7 +33,7 @@ command -v node >/dev/null 2>&1 || {
   echo "ERRO: node não encontrado. Instale o Node.js antes de continuar."
   exit 1
 }
-command -v cloudflared >/dev/null 2>&1 || {
+[ "$TUNNEL" = "off" ] || command -v cloudflared >/dev/null 2>&1 || {
   echo "ERRO: cloudflared não encontrado."
   echo "Instale: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
   exit 1
@@ -95,7 +98,12 @@ start_tunnel() {
 }
 
 start_server
-start_tunnel
+if [ "$TUNNEL" = "off" ]; then
+  rm -f "$URL_FILE"
+  echo "[$(ts)] sem túnel (TUNNEL=off): servidor em http://localhost:$PORT"
+else
+  start_tunnel
+fi
 
 # Each process is restarted on its own: the tunnel drops far more often than
 # the server crashes (flaky networks), and restarting the server along with
@@ -108,7 +116,7 @@ while true; do
     sleep 5
     start_server
   fi
-  if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+  if [ "$TUNNEL" != "off" ] && ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
     wait "$TUNNEL_PID"; echo "[$(ts)] túnel caiu (código $?) — reiniciando o túnel em 5s..."
     rm -f "$URL_FILE"
     sleep 5
