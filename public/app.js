@@ -379,6 +379,11 @@ async function rebuildVirtualPages(token) {
   if (!currentPdfDoc) return;
   if (token === undefined) token = ++renderToken;
 
+  // Onde a leitura estava (página no topo da área visível e o quanto dela já
+  // passou): recriar as páginas zera a rolagem, e sem isso cada compilação
+  // (ou zoom) voltava ao início do PDF.
+  const anchor = readingAnchor();
+
   if (renderObserver) renderObserver.disconnect();
   if (visibleObserver) visibleObserver.disconnect();
   pageEntries = [];
@@ -409,7 +414,35 @@ async function rebuildVirtualPages(token) {
 
   if (token !== renderToken) return;
   pdfViewerEl.appendChild(fragment);
+  restoreReadingAnchor(anchor);
   setupPageObservers(token);
+}
+
+// Topo de uma página em coordenadas de rolagem do visualizador.
+function pageTop(el) {
+  return el.getBoundingClientRect().top - pdfViewerEl.getBoundingClientRect().top + pdfViewerEl.scrollTop;
+}
+
+function readingAnchor() {
+  const top = pdfViewerEl.scrollTop;
+  if (!top) return null;
+  const pages = pdfViewerEl.querySelectorAll('.pdf-page');
+  for (let i = 0; i < pages.length; i++) {
+    const t = pageTop(pages[i]), h = pages[i].offsetHeight;
+    if (t + h > top) return { index: i, fraction: Math.max(0, (top - t) / h), left: pdfViewerEl.scrollLeft };
+  }
+  return pages.length ? { index: pages.length - 1, fraction: 1, left: pdfViewerEl.scrollLeft } : null;
+}
+
+// Volta à mesma página e ao mesmo ponto dela; se o documento encolheu, fica
+// na última página que ainda existe.
+function restoreReadingAnchor(anchor) {
+  if (!anchor) return;
+  const pages = pdfViewerEl.querySelectorAll('.pdf-page');
+  if (!pages.length) return;
+  const el = pages[Math.min(anchor.index, pages.length - 1)];
+  pdfViewerEl.scrollTop = pageTop(el) + anchor.fraction * el.offsetHeight;
+  pdfViewerEl.scrollLeft = anchor.left;
 }
 
 function setupPageObservers(token) {

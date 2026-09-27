@@ -301,6 +301,23 @@ function requestCompile(id, content) {
   });
 }
 
+// O Hocuspocus grava as edições no disco com atraso (debounce de ~2 s), mas o
+// autocompilar dispara 0,7 s depois da última tecla: sem isto, o compile lia
+// uma versão velha do arquivo (às vezes no meio da digitação, com uma chave
+// aberta) e, como ninguém compilava de novo depois, o PDF ficava para trás.
+// Grava agora tudo que está pendente neste projeto antes de compilar.
+async function flushProjectEdits(id) {
+  const jobs = [];
+  for (const doc of hocuspocus.documents.values()) {
+    if (!doc.name.startsWith(`${id}:`) || doc.isLoading) continue;
+    const key = `onStoreDocument-${doc.name}`;
+    if (hocuspocus.debouncer.isDebounced(key)) jobs.push(hocuspocus.debouncer.executeNow(key));
+    // Uma gravação já em andamento: espera ela terminar.
+    else if (doc.saveMutex && doc.saveMutex.isLocked()) jobs.push(doc.saveMutex.runExclusive(() => {}));
+  }
+  await Promise.allSettled(jobs);
+}
+
 async function processQueue(id) {
   const q = getQueue(id);
   q.running = true;
@@ -309,6 +326,7 @@ async function processQueue(id) {
     const currentWaiters = q.waiters;
     q.waiters = [];
     try {
+      if (typeof contentToCompile !== 'string') await flushProjectEdits(id);
       const result = await runCompile(id, contentToCompile);
       result.seq = ++q.seq;
       currentWaiters.forEach((w) => w.resolve(result));
