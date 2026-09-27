@@ -1046,3 +1046,23 @@ button, input {
 .pdf-page canvas {
   cursor: text;
 }
+
+/* --- Rede KORPUS (sincronizar o projeto) --- */
+.rede-body { padding: var(--space-3); overflow-y: auto; display: flex; flex-direction: column; gap: 14px; font-size: 13.5px; color: var(--text-body); }
+.rede-muted { color: var(--text-muted); font-size: 12.5px; margin: 0; line-height: 1.5; }
+.rede-state { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-strong); }
+.rede-state::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--concreto); flex: none; }
+.rede-state.on::before { background: #34d399; }
+.rede-state.wait::before { background: var(--amarelo); }
+.rede-warn { background: #fff4e5; color: #7d470a; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; }
+.rede-box { border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.rede-box h4 { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.rede-box .t { font-weight: 650; color: var(--text-strong); line-height: 1.35; }
+.rede-opts { display: flex; flex-direction: column; gap: 6px; }
+.rede-opts label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 9px 11px; cursor: pointer; }
+.rede-opts label:has(input:checked) { border-color: var(--urucum); background: #fdeceb; }
+.rede-opts b { display: block; color: var(--text-strong); font-size: 13.5px; }
+.rede-opts span { color: var(--text-muted); font-size: 12px; }
+.rede-opts input { margin-top: 3px; accent-color: var(--urucum); }
+.rede-go { width: 100%; }
+.rede-err { color: #9c1f16; font-size: 12.5px; margin: 0; }

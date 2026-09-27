@@ -42,6 +42,7 @@
     <button id="compile-btn" class="btn btn-primary">Compilar agora</button>
     <a id="download-link" class="btn btn-secondary" href="#" download="documento.pdf">Baixar PDF</a>
     <button id="chat-toggle-btn" class="btn btn-secondary" title="Assistente de escrita">✨ Assistente</button>
+    <button id="rede-toggle-btn" class="btn btn-secondary" title="Enviar este projeto para a rede KORPUS">🌐 Rede</button>
   </header>
 
   <main class="workspace">
@@ -97,6 +98,13 @@
       </section>
     </div>
 
+    <aside class="chat-panel rede-panel" id="rede-panel" aria-label="Rede KORPUS">
+      <div class="chat-header">
+        <div class="chat-title">Rede KORPUS</div>
+        <button type="button" class="chat-close-btn" id="rede-close-btn" title="Fechar">✕</button>
+      </div>
+      <div class="rede-body" id="rede-body"><p class="rede-muted">Carregando…</p></div>
+    </aside>
     <aside class="chat-panel" id="chat-panel">
       <div class="chat-header">
         <div class="sidebar-title">Assistente de escrita</div>

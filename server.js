@@ -14,6 +14,7 @@ const { Hocuspocus } = require('@hocuspocus/server');
 const Y = require('yjs');
 const nodeAdapter = require('crossws/adapters/node').default;
 const synctexParser = require('./lib/synctex-parser');
+const korpusLib = require('./lib/korpus');
 
 // Configuração opcional num .env ao lado deste arquivo (fora do git): chave da
 // Anthropic, senha, AUTH_SECRET etc. Variáveis já definidas no ambiente valem
@@ -38,6 +39,8 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 // consultar e citar. Só leitura; sem as duas variáveis, nada muda.
 const KORPUS_URL = String(process.env.KORPUS_URL || '').replace(/\/+$/, '');
 const KORPUS_TOKEN = process.env.KORPUS_TOKEN || '';
+// Quem assina os envios para a rede (o LaTeX Live hoje é de um usuário só).
+const KORPUS_AUTOR = { name: process.env.KORPUS_AUTOR_NOME || '', email: process.env.KORPUS_AUTOR_EMAIL || '' };
 const AUTH_SECRET = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 const AUTH_COOKIE = 'latex_live_auth';
 
@@ -843,6 +846,86 @@ function chatRateLimitExceeded() {
   chatRequestTimestamps.push(now);
   return false;
 }
+
+// --- Rede KORPUS: sincronizar o projeto --------------------------------------
+// O autor escolhe a situação do projeto (rascunho, em submissão, publicado) e
+// envia com um clique, como na extensão do Overleaf. Rascunhos nunca saem. O
+// texto vai para a rede gerar o resumo e lá é descartado.
+const KORPUS_STATUSES = ['draft', 'submission', 'published'];
+
+async function korpusPost(p, body) {
+  const res = await fetch(`${KORPUS_URL}${p}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KORPUS_TOKEN}`, 'ngrok-skip-browser-warning': '1' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30000),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Rede KORPUS respondeu ${res.status}`);
+  return data;
+}
+
+async function korpusPaperFor(projectId) {
+  await flushProjectEdits(projectId); // o que está na tela, não uma versão velha do disco
+  const root = projectDir(projectId);
+  const paper = korpusLib.buildPaper(mainFileAbs(projectId), (abs) => {
+    try { return fs.readFileSync(abs, 'utf8'); } catch { return null; }
+  }, root);
+  paper.hash = crypto.createHash('sha256').update(paper.content).digest('hex');
+  return paper;
+}
+
+app.get('/api/projects/:id/korpus', async (req, res) => {
+  const meta = readProjectMeta(req.params.id);
+  const k = meta.korpus || {};
+  const out = { enabled: korpusEnabled(), autor: !!KORPUS_AUTOR.email, status: k.status || 'draft', syncedAt: k.syncedAt || null, network: null };
+  try {
+    const paper = await korpusPaperFor(req.params.id);
+    out.preview = { title: paper.metadata.title, authors: paper.metadata.authors, abstract: paper.metadata.abstract.slice(0, 400),
+      keywords: paper.metadata.keywords, files: paper.files.length, chars: paper.contentChars, truncated: paper.truncated };
+    out.changed = !!k.hash && k.hash !== paper.hash;
+  } catch (err) {
+    out.previewError = String(err.message || err);
+  }
+  if (korpusEnabled() && k.syncedAt) {
+    try { out.network = (await korpusPost('/api/korpus/situacao', { projectIds: [req.params.id] })).papers[req.params.id] || null; } catch { /* rede fora do ar */ }
+  }
+  res.json(out);
+});
+
+app.post('/api/projects/:id/korpus', async (req, res) => {
+  const id = req.params.id;
+  const status = String((req.body || {}).status || '');
+  if (!KORPUS_STATUSES.includes(status)) return res.status(400).json({ error: 'Situação inválida.' });
+  if (!korpusEnabled()) return res.status(503).json({ error: 'Rede KORPUS não configurada (KORPUS_URL e KORPUS_TOKEN no .env).' });
+  const meta = readProjectMeta(id);
+  const k = meta.korpus || {};
+  try {
+    if (status === 'draft') {
+      // Voltar a rascunho tira o projeto da rede.
+      const removed = k.syncedAt ? (await korpusPost('/api/korpus/remover', { projectId: id })).removed : false;
+      meta.korpus = { status: 'draft' };
+      writeProjectMeta(id, meta);
+      return res.json({ ok: true, removed });
+    }
+    if (!KORPUS_AUTOR.email) return res.status(400).json({ error: 'Configure KORPUS_AUTOR_NOME e KORPUS_AUTOR_EMAIL no .env do LaTeX Live.' });
+    const paper = await korpusPaperFor(id);
+    if (!paper.content.trim()) return res.status(400).json({ error: 'O arquivo principal está vazio.' });
+    const result = await korpusPost('/api/korpus/sincronizar', {
+      submitter: KORPUS_AUTOR,
+      project: {
+        id, name: meta.name || DEFAULT_PROJECT_NAME, status, lastUpdated: meta.updatedAt || new Date().toISOString(),
+        mainFile: getMainFileRel(id), owner: KORPUS_AUTOR, members: [],
+        metadata: paper.metadata, content: paper.content, contentChars: paper.contentChars, truncated: paper.truncated,
+      },
+    });
+    meta.korpus = { status, syncedAt: new Date().toISOString(), hash: paper.hash };
+    writeProjectMeta(id, meta);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(502).json({ error: String(err.message || err) });
+  }
+});
 
 // --- Assistant tools: let the chat see the whole project and change it ------
 // Reads prefer the live Yjs document when one is loaded (it can be up to a

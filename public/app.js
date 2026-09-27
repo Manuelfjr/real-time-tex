@@ -1255,3 +1255,95 @@ logPanel.classList.add('collapsed');
 loadProjectName();
 fetchFiles();
 subscribeToCompileEvents();
+
+// --- Rede KORPUS: sincronizar este projeto ----------------------------------
+// Rascunho nunca sai; "Em submissão" e "Publicado" são enviados com um clique.
+// A rede gera o resumo a partir do texto e o descarta.
+const redePanel = document.getElementById('rede-panel');
+const redeBody = document.getElementById('rede-body');
+let redeState = null;
+
+function redeAgo(iso) {
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(min)) return '';
+  return min < 1 ? 'agora' : min < 60 ? `há ${min} min` : min < 1440 ? `há ${Math.round(min / 60)} h` : `há ${Math.round(min / 1440)} dias`;
+}
+const redeEsc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderRede(msg) {
+  const st = redeState;
+  if (!st) { redeBody.innerHTML = '<p class="rede-muted">Carregando…</p>'; return; }
+  if (!st.enabled) {
+    redeBody.innerHTML = '<p class="rede-muted">A rede KORPUS não está configurada neste servidor (KORPUS_URL e KORPUS_TOKEN no .env).</p>';
+    return;
+  }
+  const net = st.network;
+  const inNet = !!st.syncedAt && st.status !== 'draft';
+  const stateLine = !inNet ? '<div class="rede-state">Não está na rede</div>'
+    : net && net.summaryStatus === 'pending' ? `<div class="rede-state wait">Na rede · gerando o resumo…</div>`
+    : `<div class="rede-state on">Na rede · enviado ${redeAgo(st.syncedAt)}</div>`;
+  const pv = st.preview || {};
+  const opt = (v, t, d) => `<label><input type="radio" name="rede-status" value="${v}" ${st.status === v ? 'checked' : ''}><div><b>${t}</b><span>${d}</span></div></label>`;
+  redeBody.innerHTML = `
+    ${stateLine}
+    ${inNet && st.changed ? '<div class="rede-warn">Há alterações desde o último envio. Atualize para a rede ver a versão nova.</div>' : ''}
+    <div class="rede-box">
+      <h4>O que será enviado</h4>
+      ${st.previewError ? `<p class="rede-err">${redeEsc(st.previewError)}</p>` : `
+        <div class="t">${redeEsc(pv.title || '(sem \\title no documento)')}</div>
+        <div class="rede-muted">${redeEsc((pv.authors || []).join(', ') || 'autores não identificados')}</div>
+        ${pv.keywords && pv.keywords.length ? `<div class="rede-muted">${redeEsc(pv.keywords.join(' · '))}</div>` : ''}
+        <div class="rede-muted">${pv.files} arquivo(s) · ${Number(pv.chars || 0).toLocaleString('pt-BR')} caracteres${pv.truncated ? ' (será cortado)' : ''}</div>`}
+    </div>
+    <div class="rede-opts">
+      ${opt('draft', 'Rascunho', 'não sai daqui')}
+      ${opt('submission', 'Em submissão', 'entra na rede com um clique')}
+      ${opt('published', 'Publicado', 'entra na rede com um clique')}
+    </div>
+    ${st.autor ? '' : '<p class="rede-err">Configure KORPUS_AUTOR_NOME e KORPUS_AUTOR_EMAIL no .env do LaTeX Live para enviar.</p>'}
+    <button type="button" class="btn btn-primary rede-go" id="rede-go"></button>
+    ${msg ? `<p class="${msg.error ? 'rede-err' : 'rede-muted'}">${redeEsc(msg.text)}</p>` : ''}
+    <p class="rede-muted">Na rede ficam os metadados e o resumo feito pela IA; o texto completo é descartado. Voltar a rascunho tira o projeto da rede.</p>`;
+  const go = document.getElementById('rede-go');
+  const chosen = () => (redeBody.querySelector('input[name=rede-status]:checked') || {}).value || 'draft';
+  const label = () => {
+    const c = chosen();
+    if (c === 'draft') return inNet ? ['Tirar da rede', false] : ['Rascunhos não são enviados', true];
+    if (!st.autor) return ['Enviar para a rede', true];
+    return [inNet ? (st.changed || c !== st.status ? 'Atualizar na rede' : 'Enviar de novo') : 'Enviar para a rede', false];
+  };
+  const refresh = () => { const [t, dis] = label(); go.textContent = t; go.disabled = dis; };
+  redeBody.querySelectorAll('input[name=rede-status]').forEach((r) => r.addEventListener('change', refresh));
+  refresh();
+  go.addEventListener('click', async () => {
+    go.disabled = true; go.textContent = 'Enviando…';
+    try {
+      const res = await fetch(api('/korpus'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: chosen() }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const text = chosen() === 'draft' ? (data.removed ? 'Projeto tirado da rede.' : 'Marcado como rascunho.')
+        : data.action === 'unchanged' ? 'A rede já tinha esta versão.' : 'Enviado. A rede está gerando o resumo.';
+      await loadRede({ text });
+    } catch (err) {
+      renderRede({ error: true, text: err.message });
+    }
+  });
+}
+
+async function loadRede(msg) {
+  try {
+    const res = await fetch(api('/korpus'));
+    redeState = await res.json();
+  } catch (err) {
+    redeState = { enabled: false };
+  }
+  renderRede(msg);
+}
+
+document.getElementById('rede-toggle-btn').addEventListener('click', () => {
+  const open = !redePanel.classList.contains('open');
+  redePanel.classList.toggle('open', open);
+  if (open) { document.getElementById('chat-panel').classList.remove('open'); redeState = null; renderRede(); loadRede(); }
+});
+document.getElementById('rede-close-btn').addEventListener('click', () => redePanel.classList.remove('open'));
+document.getElementById('chat-toggle-btn').addEventListener('click', () => redePanel.classList.remove('open'));
