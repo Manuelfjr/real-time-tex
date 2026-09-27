@@ -1051,13 +1051,17 @@ function renderChatText(el, text) {
 
 function toolLabel(tool) {
   const p = tool.path || '';
+  // Leitura em outro projeto do usuário: mostra de qual.
+  const em = tool.project ? ` em “${tool.project}”` : '';
   switch (tool.name) {
+    case 'list_projects':
+      return '🗂️ Viu a lista de projetos';
     case 'list_files':
-      return '📂 Viu os arquivos do projeto';
+      return tool.project ? `📂 Viu os arquivos de “${tool.project}”` : '📂 Viu os arquivos do projeto';
     case 'read_file':
-      return `📖 Leu ${p}`;
+      return `📖 Leu ${p}${em}`;
     case 'search_project':
-      return `🔎 Buscou “${tool.detail || ''}”`;
+      return `🔎 Buscou “${tool.detail || ''}”${em}`;
     case 'edit_file':
       return `✏️ Alterou ${p}`;
     case 'create_file':

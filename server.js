@@ -874,6 +874,28 @@ function aiResolveTextFile(projectId, relPath) {
   return { abs, rel };
 }
 
+// Leitura em outros projetos (o LaTeX Live hoje é de um usuário só, então o
+// assistente enxerga todos os projetos dele). `project` aceita o id ou o nome
+// exato; sem ele, vale o projeto aberto. Alterações continuam só no aberto.
+function aiTargetProject(currentId, project) {
+  if (project === undefined || project === null || project === '') return currentId;
+  const wanted = String(project).trim();
+  const all = listProjects();
+  const hit = all.find((p) => p.id === wanted) || all.find((p) => p.name.toLowerCase() === wanted.toLowerCase());
+  if (!hit) throw new Error(`Projeto "${wanted}" não encontrado. Use list_projects para ver os projetos.`);
+  return hit.id;
+}
+
+function aiProjectName(id) {
+  return readProjectMeta(id).name || DEFAULT_PROJECT_NAME;
+}
+
+function aiFormatProjectList(currentId) {
+  return listProjects().slice(0, 100).map((p) =>
+    `${p.name} (id: ${p.id}${p.updatedAt ? `, editado em ${String(p.updatedAt).slice(0, 10)}` : ''})${p.id === currentId ? '  ← aberto agora' : ''}`,
+  ).join('\n') || '(nenhum projeto)';
+}
+
 function aiDocName(projectId, rel) {
   return `${projectId}:${rel}`;
 }
@@ -948,11 +970,21 @@ function countOccurrences(haystack, needle) {
   return count;
 }
 
+const AI_PROJECT_PARAM = {
+  type: 'string',
+  description: 'Opcional: id ou nome de OUTRO projeto do usuário (veja list_projects), só para leitura. Sem ele, usa o projeto aberto.',
+};
+
 const AI_TOOLS = [
   {
-    name: 'list_files',
-    description: 'Lista todos os arquivos do projeto (caminho relativo e tamanho), indicando qual é o arquivo principal.',
+    name: 'list_projects',
+    description: 'Lista todos os projetos do usuário no LaTeX Live (nome, id e última edição), indicando qual está aberto.',
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'list_files',
+    description: 'Lista todos os arquivos de um projeto (caminho relativo e tamanho), indicando qual é o arquivo principal.',
+    input_schema: { type: 'object', properties: { project: AI_PROJECT_PARAM }, additionalProperties: false },
   },
   {
     name: 'read_file',
@@ -965,6 +997,7 @@ const AI_TOOLS = [
         path: { type: 'string', description: 'Caminho relativo à raiz do projeto, exatamente como aparece em list_files.' },
         start_line: { type: 'integer', minimum: 1 },
         end_line: { type: 'integer', minimum: 1 },
+        project: AI_PROJECT_PARAM,
       },
       required: ['path'],
       additionalProperties: false,
@@ -977,7 +1010,7 @@ const AI_TOOLS = [
       'Retorna "arquivo:linha: conteúdo" para cada ocorrência. Útil para achar onde um \\label, \\cite, seção ou termo aparece.',
     input_schema: {
       type: 'object',
-      properties: { query: { type: 'string', minLength: 1 } },
+      properties: { query: { type: 'string', minLength: 1 }, project: AI_PROJECT_PARAM },
       required: ['query'],
       additionalProperties: false,
     },
@@ -1026,7 +1059,9 @@ function aiValidateInput(name, input) {
   const isStr = (v) => typeof v === 'string';
   const isOptInt = (v) => v === undefined || (Number.isInteger(v) && v >= 1);
   if (!input || typeof input !== 'object') return 'Entrada inválida.';
+  if (input.project !== undefined && !isStr(input.project)) return 'Parâmetro project inválido.';
   switch (name) {
+    case 'list_projects':
     case 'list_files':
       return null;
     case 'read_file':
@@ -1051,13 +1086,26 @@ async function aiRunTool(projectId, name, input) {
   if (invalid) return { content: invalid, isError: true, event: { name, status: 'error', detail: invalid } };
 
   try {
+    if (name === 'list_projects') {
+      return { content: aiFormatProjectList(projectId), event: { name, status: 'ok' } };
+    }
+
+    // Alterar outro projeto não é permitido: recusa em vez de gravar por engano no aberto.
+    if ((name === 'edit_file' || name === 'create_file') && input.project !== undefined && aiTargetProject(projectId, input.project) !== projectId) {
+      throw new Error('Outros projetos são só para leitura: edit_file e create_file alteram apenas o projeto aberto.');
+    }
+
+    // Leitura: no projeto aberto ou, com `project`, em outro projeto do usuário.
+    const readId = ['list_files', 'read_file', 'search_project'].includes(name) ? aiTargetProject(projectId, input.project) : projectId;
+    const other = readId !== projectId ? aiProjectName(readId) : undefined;
+
     if (name === 'list_files') {
-      return { content: aiFormatFileList(aiListFiles(projectId)), event: { name, status: 'ok' } };
+      return { content: aiFormatFileList(aiListFiles(readId)), event: { name, status: 'ok', project: other } };
     }
 
     if (name === 'read_file') {
-      const { abs, rel } = aiResolveTextFile(projectId, input.path);
-      const text = aiReadLive(projectId, rel, abs);
+      const { abs, rel } = aiResolveTextFile(readId, input.path);
+      const text = aiReadLive(readId, rel, abs);
       if (text === null) throw new Error(`"${rel}" não existe.`);
       const lines = text.split('\n');
       const from = input.start_line || 1;
@@ -1068,15 +1116,15 @@ async function aiRunTool(projectId, name, input) {
         body = body.slice(0, AI_MAX_READ_CHARS);
         header += ` (trecho cortado em ${AI_MAX_READ_CHARS} caracteres; leia o resto com start_line/end_line)`;
       }
-      return { content: `${header}\n\n${body}`, event: { name, status: 'ok', path: rel } };
+      return { content: `${header}\n\n${body}`, event: { name, status: 'ok', path: rel, project: other } };
     }
 
     if (name === 'search_project') {
       const needle = input.query.toLowerCase();
       const hits = [];
-      for (const f of aiListFiles(projectId)) {
+      for (const f of aiListFiles(readId)) {
         if (!AI_TEXT_EXT.includes(path.extname(f.rel).slice(1).toLowerCase()) || f.size > 2_000_000) continue;
-        const text = aiReadLive(projectId, f.rel, f.abs) || '';
+        const text = aiReadLive(readId, f.rel, f.abs) || '';
         text.split('\n').forEach((line, i) => {
           if (hits.length < 80 && line.toLowerCase().includes(needle)) {
             hits.push(`${f.rel}:${i + 1}: ${line.trim().slice(0, 200)}`);
@@ -1084,7 +1132,7 @@ async function aiRunTool(projectId, name, input) {
         });
       }
       const content = hits.length ? hits.join('\n') + (hits.length >= 80 ? '\n(limite de 80 resultados atingido)' : '') : 'Nenhuma ocorrência.';
-      return { content, event: { name, status: 'ok', detail: input.query } };
+      return { content, event: { name, status: 'ok', detail: input.query, project: other } };
     }
 
     if (name === 'edit_file') {
@@ -1145,7 +1193,10 @@ app.post('/api/projects/:id/chat', async (req, res) => {
     'Você é um assistente de escrita acadêmica e LaTeX integrado ao LaTeX Live, um editor colaborativo. ' +
     'Responda em português do Brasil, de forma direta e concisa. Quando mostrar código LaTeX, use blocos de código.\n\n' +
     'Você tem acesso ao projeto inteiro por ferramentas: list_files, read_file e search_project para entender o ' +
-    'projeto, e edit_file e create_file para alterá-lo. Use-as assim:\n' +
+    'projeto, e edit_file e create_file para alterá-lo. Você também enxerga os OUTROS projetos do usuário: ' +
+    'list_projects lista todos, e list_files/read_file/search_project aceitam o parâmetro project (id ou nome) para ' +
+    'ler outro projeto — útil para reaproveitar texto, preâmbulo, referências ou comparar trabalhos. Os outros projetos ' +
+    'são só para leitura: edit_file e create_file alteram apenas o projeto aberto. Use-as assim:\n' +
     '- Para dúvidas, explicações e revisões que o usuário só quer ler, responda sem alterar nada.\n' +
     '- Quando o usuário pedir uma mudança (escrever, corrigir, reorganizar, adicionar, traduzir…), aplique-a nos ' +
     'arquivos com edit_file/create_file em vez de só mostrar o código. Leia o trecho com read_file antes de editar.\n' +
@@ -1160,7 +1211,8 @@ app.post('/api/projects/:id/chat', async (req, res) => {
     (path.dirname(mainRel) !== '.'
       ? `A compilação roda na pasta ${path.dirname(mainRel)}/, então caminhos em \\input, \\include, \\includegraphics e \\bibliography são relativos a ela (não à raiz do projeto).\n\n`
       : '\n') +
-    `Arquivos do projeto:\n${aiFormatFileList(aiListFiles(projectId), 300)}`;
+    `Arquivos do projeto:\n${aiFormatFileList(aiListFiles(projectId), 300)}\n\n` +
+    `Projetos do usuário:\n${aiFormatProjectList(projectId)}`;
 
   if (typeof file === 'string') {
     try {
