@@ -49,6 +49,27 @@ else
   echo "instalado: $("$LOCAL_BIN/tectonic" --version | head -1)"
 fi
 
+echo "== ghostscript (figuras EPS) =="
+# O tectonic não lê EPS; o LaTeX Live converte para PDF com o Ghostscript antes
+# de compilar. Usa o gs do sistema, se houver; senão, o binário estático oficial
+# da Artifex (10.0.0, o último publicado assim), conferido pelo SHA-256.
+GS_URL="https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs1000/ghostscript-10.0.0-linux-x86_64.tgz"
+GS_SHA256="176ad1cbad402ae5930521f954ad70dffaaf8d625cf508feeea4f9bf2e61f3d4"
+if command -v gs >/dev/null 2>&1 && gs --version >/dev/null 2>&1; then
+  echo "já instalado: gs $(gs --version)"
+elif [ "$(uname -s)-$(uname -m)" = "Linux-x86_64" ]; then
+  tmpdir="$(mktemp -d)"
+  curl -fL -o "$tmpdir/gs.tgz" "$GS_URL"
+  echo "$GS_SHA256  $tmpdir/gs.tgz" | sha256sum -c - >/dev/null || { echo "ERRO: o arquivo do Ghostscript não confere (SHA-256)."; exit 1; }
+  tar -xzf "$tmpdir/gs.tgz" -C "$tmpdir"
+  mv "$tmpdir/ghostscript-10.0.0-linux-x86_64/gs-1000-linux-x86_64" "$LOCAL_BIN/gs"
+  chmod +x "$LOCAL_BIN/gs"
+  rm -rf "$tmpdir"
+  echo "instalado: gs $("$LOCAL_BIN/gs" --version)"
+else
+  echo "AVISO: instale o Ghostscript para compilar figuras EPS (ex.: brew install ghostscript)."
+fi
+
 echo "== cloudflared =="
 if [ "${TUNNEL:-on}" = "off" ]; then
   echo "pulado (TUNNEL=off)"

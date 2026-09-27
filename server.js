@@ -15,6 +15,7 @@ const Y = require('yjs');
 const nodeAdapter = require('crossws/adapters/node').default;
 const synctexParser = require('./lib/synctex-parser');
 const korpusLib = require('./lib/korpus');
+const epsLib = require('./lib/eps');
 
 // Configuração opcional num .env ao lado deste arquivo (fora do git): chave da
 // Anthropic, senha, AUTH_SECRET etc. Variáveis já definidas no ambiente valem
@@ -340,7 +341,23 @@ async function processQueue(id) {
     q.waiters = [];
     try {
       if (typeof contentToCompile !== 'string') await flushProjectEdits(id);
-      const result = await runCompile(id, contentToCompile);
+      // Figuras EPS: converte para PDF e compila uma cópia de trabalho (lib/eps.js).
+      let prep = null, prepNote = '';
+      if (typeof contentToCompile !== 'string') {
+        try {
+          prep = await epsLib.prepare({ projectRoot: projectDir(id), mainAbs: mainFileAbs(id), outDir: outputDir(id) });
+        } catch (err) {
+          prepNote = `[figuras EPS] ${err.message}\n\n`;
+        }
+      }
+      const result = await runCompile(id, contentToCompile, prep && prep.mainAbs);
+      if (prep && prep.notes && prep.notes.length) prepNote += `[figuras EPS] ${prep.notes.join('; ')}\n\n`;
+      if (prep && prep.missingGhostscript) {
+        prepNote += `[figuras EPS] O projeto tem ${prep.count} imagem(ns) EPS, e o Ghostscript (gs) não está instalado neste servidor, ` +
+          'então elas não podem ser convertidas para PDF. Instale o Ghostscript (o setup-cin.sh instala) ou converta as figuras ' +
+          'para PDF/PNG e use \\includegraphics{nome} sem extensão.\n\n';
+      }
+      if (prepNote) result.log = prepNote + (result.log || '');
       result.seq = ++q.seq;
       currentWaiters.forEach((w) => w.resolve(result));
       broadcastCompileResult(id, result);
@@ -353,7 +370,7 @@ async function processQueue(id) {
   q.running = false;
 }
 
-function runCompile(id, content) {
+function runCompile(id, content, compileMain) {
   return new Promise((resolve) => {
     const texPath = mainFileAbs(id);
     // The main file is now kept up to date continuously by the Yjs
@@ -371,8 +388,10 @@ function runCompile(id, content) {
     // that \input/\includegraphics paths inside imported projects — which
     // may nest their main file in a subfolder — resolve exactly as the
     // original project intended.
-    const proc = spawn('tectonic', ['--synctex', '--outdir', outDir, texPath], {
-      cwd: path.dirname(texPath),
+    // compileMain: o principal dentro da cópia de trabalho (figuras EPS convertidas).
+    const input = compileMain || texPath;
+    const proc = spawn('tectonic', ['--synctex', '--outdir', outDir, input], {
+      cwd: path.dirname(input),
     });
 
     let log = '';

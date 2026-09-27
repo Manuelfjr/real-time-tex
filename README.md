@@ -151,6 +151,11 @@ figuras em alta resolução, bibliografias longas) sem travar:
   - `COMPILE_TIMEOUT_MS` (padrão 180000 = 3 min) — documentos com muitas
     imagens ou muitas passadas de BibTeX podem demorar mais que o padrão de
     editores simples.
+- **Figuras EPS** funcionam como no Overleaf: antes de compilar, cada `.eps` é
+  convertido para PDF com o Ghostscript (`gs`, instalado pelo `setup-cin.sh`), numa
+  cópia de trabalho em `.output/build/`; os arquivos do projeto não são alterados,
+  e `\includegraphics{fig.eps}` passa a usar o PDF convertido. Sem Ghostscript, o
+  log explica como resolver.
 - A primeira compilação de cada projeto pode ser mais lenta (o `tectonic`
   baixa fontes/pacotes sob demanda); as seguintes usam o cache local dele e
   ficam bem mais rápidas.
