@@ -63,9 +63,10 @@
         <li class="file-empty">Nenhum arquivo ainda</li>
       </ul>
       <p class="sidebar-hint">
-        Clique num arquivo <code>.tex</code>/<code>.bib</code> para abri-lo no editor. Use "⇥" pra
-        inserir uma referência a ele no arquivo aberto, 📌 para compilar aquele <code>.tex</code> (vira o principal), ✎ para renomear e ✕ para excluir. Pastas
-        podem ser criadas com caminhos como "imagens/graficos".
+        Clique num arquivo para abri-lo: textos (<code>.tex</code>, <code>.bib</code>, <code>.md</code>, <code>.csv</code>…)
+        abrem no editor; imagens e PDF, no visualizador. Use "⇥" pra inserir uma referência a ele no arquivo aberto,
+        📌 para compilar aquele <code>.tex</code> (vira o principal), ✎ para renomear e ✕ para excluir. Pastas podem ser
+        criadas com caminhos como "imagens/graficos".
       </p>
     </aside>
 
@@ -74,6 +75,7 @@
     <div class="split-area" id="split-area">
       <section class="pane editor-pane">
         <textarea id="editor"></textarea>
+        <div class="file-viewer hidden" id="file-viewer" aria-live="polite"></div>
       </section>
 
       <div class="divider" id="divider" title="Arraste para ajustar · duplo clique volta ao meio"></div>

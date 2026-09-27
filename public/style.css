@@ -1072,3 +1072,22 @@ button, input {
 .file-sidebar.collapsed { width: 0 !important; border-right: 0; overflow: hidden; }
 body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
 body.resizing .pdf-viewer, body.resizing .CodeMirror { pointer-events: none; }
+
+/* --- Visualizador de arquivos (imagens, PDF, outros) --- */
+.editor-pane { position: relative; }
+.file-viewer { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; background: #1e2227; color: #E6E6E6; }
+.file-viewer.hidden { display: none; }
+.fv-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 13px; }
+.fv-bar .fv-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.fv-bar .fv-meta { color: #9aa0a6; font-size: 12px; }
+.fv-bar a, .fv-bar button { color: #E6E6E6; background: rgba(255,255,255,.08); border: 0; border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; }
+.fv-bar a:hover, .fv-bar button:hover { background: rgba(255,255,255,.16); }
+.fv-body { flex: 1; min-height: 0; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 18px;
+  background-image: linear-gradient(45deg, rgba(255,255,255,.03) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255,255,255,.03) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.03) 75%);
+  background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; }
+.fv-body img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 6px 24px rgba(0,0,0,.35); background: #fff; }
+.fv-body iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.fv-body.fv-pdf { padding: 0; }
+.fv-card { text-align: center; max-width: 380px; font-size: 14px; color: #c9cdd1; line-height: 1.5; }
+.fv-card .fv-icon { font-size: 44px; margin-bottom: 10px; }

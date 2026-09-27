@@ -146,6 +146,9 @@ let firstSyncHandled = false;
 // the main file — can be opened, edited live with collaborators, and stays
 // saved whether or not anyone's connected.
 function connectToFile(relPath, onReady) {
+  closeViewer();
+  // Realce de LaTeX só nos arquivos LaTeX; os demais (.md, .csv, .py…) como texto simples.
+  cm.setOption('mode', ['tex', 'sty', 'cls', 'ltx', 'dtx', 'ins', 'bbx', 'cbx', 'lbx', 'cfg', 'clo', 'def'].includes(extOf(relPath)) ? 'stex' : 'text/plain');
   if (relPath === currentFile) {
     if (onReady) onReady();
     return;
@@ -714,7 +717,11 @@ projectNameInput.addEventListener('keydown', (e) => {
 // ------------------------------------------------------------------
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
-const EDITABLE_EXT = ['tex', 'bib', 'sty', 'cls'];
+// Abrem no editor (texto, com colaboração ao vivo). Imagens e PDF abrem no
+// visualizador; o resto, num cartão com o botão de baixar.
+const EDITABLE_EXT = ['tex', 'bib', 'sty', 'cls', 'bst', 'bbx', 'cbx', 'lbx', 'dtx', 'ins', 'cfg', 'clo', 'def', 'ltx',
+  'md', 'markdown', 'txt', 'csv', 'tsv', 'json', 'yml', 'yaml', 'xml', 'py', 'r', 'm', 'jl', 'sh', 'lua', 'bat', 'ini', 'toml', 'log'];
+const VIEW_PDF_EXT = ['pdf'];
 let pendingUploadFolder = '';
 
 function extOf(name) {
@@ -729,6 +736,11 @@ function iconFor(name) {
   if (ext === 'bib') return '📚';
   if (ext === 'tex') return '📝';
   if (ext === 'cls' || ext === 'sty') return '🧩';
+  if (ext === 'eps') return '🖼️';
+  if (['md', 'markdown', 'txt', 'log'].includes(ext)) return '📃';
+  if (['csv', 'tsv'].includes(ext)) return '📊';
+  if (['json', 'yml', 'yaml', 'xml', 'toml', 'ini'].includes(ext)) return '🧾';
+  if (['py', 'r', 'm', 'jl', 'sh', 'lua', 'bat'].includes(ext)) return '💻';
   return '📎';
 }
 
@@ -902,7 +914,8 @@ function buildTreeNode(node) {
 
     const editable = EDITABLE_EXT.includes(extOf(node.name));
 
-    if (editable) {
+    const insertable = editable || IMAGE_EXT.includes(extOf(node.name)) || ['pdf', 'eps'].includes(extOf(node.name));
+    if (insertable) {
       const insertRef = document.createElement('span');
       insertRef.className = 'tree-action';
       insertRef.textContent = '⇥';
@@ -933,16 +946,53 @@ function buildTreeNode(node) {
       row.title = 'Clique para abrir e editar este arquivo';
       row.addEventListener('click', () => connectToFile(node.path));
     } else {
-      row.title = 'Clique para inserir no editor';
-      row.addEventListener('click', () => {
-        insertSnippetSafely(snippetFor(node.path));
-      });
+      row.title = 'Clique para ver o arquivo (⇥ insere a referência no código)';
+      row.addEventListener('click', () => openViewer(node.path, node.size));
     }
 
     li.appendChild(row);
   }
 
   return li;
+}
+
+// --- Visualizador: imagens e PDF para ver; outros tipos, só baixar ---------
+const fileViewer = document.getElementById('file-viewer');
+let viewing = null;
+const rawUrl = (rel, download) => api(`/raw?path=${encodeURIComponent(rel)}${download ? '&download=1' : ''}`);
+const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function fmtSize(n) {
+  if (!Number.isFinite(n)) return '';
+  return n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+}
+
+function openViewer(relPath, size) {
+  viewing = relPath;
+  const ext = extOf(relPath);
+  const name = relPath.split('/').pop();
+  let body;
+  if (IMAGE_EXT.includes(ext)) body = `<div class="fv-body"><img src="${rawUrl(relPath)}" alt="${escHtml(name)}"></div>`;
+  else if (VIEW_PDF_EXT.includes(ext)) body = `<div class="fv-body fv-pdf"><iframe src="${rawUrl(relPath)}" title="${escHtml(name)}"></iframe></div>`;
+  else body = `<div class="fv-body"><div class="fv-card"><div class="fv-icon">${iconFor(name)}</div>
+      Este tipo de arquivo não tem pré-visualização aqui${ext === 'eps' ? ' (EPS é convertido para PDF só na compilação)' : ''}.<br>Você pode baixá-lo ou inserir a referência no código com ⇥.</div></div>`;
+  fileViewer.innerHTML = `<div class="fv-bar"><span class="fv-name" title="${escHtml(relPath)}">${iconFor(name)} ${escHtml(relPath)}</span>
+      <span class="fv-meta">${fmtSize(size)}</span>
+      <a href="${rawUrl(relPath, true)}">Baixar</a>
+      <button type="button" id="fv-insert" title="Inserir a referência no arquivo aberto">⇥ Inserir</button>
+      <button type="button" id="fv-close" title="Voltar ao código">✕ Voltar ao código</button></div>${body}`;
+  fileViewer.classList.remove('hidden');
+  document.getElementById('fv-close').addEventListener('click', closeViewer);
+  document.getElementById('fv-insert').addEventListener('click', () => { closeViewer(); insertSnippetSafely(snippetFor(relPath)); });
+  fileListEl.querySelectorAll('.tree-row[data-path]').forEach((row) => row.classList.toggle('active', row.dataset.path === relPath));
+}
+
+function closeViewer() {
+  if (!viewing) return;
+  viewing = null;
+  fileViewer.classList.add('hidden');
+  fileViewer.innerHTML = '';
+  if (typeof updateActiveFileUI === 'function' && currentFile) updateActiveFileUI();
+  cm.refresh();
 }
 
 async function setMainFile(relPath) {

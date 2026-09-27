@@ -650,6 +650,25 @@ app.get('/api/projects/:id/document', (req, res) => {
   res.json({ content, mainFile: getMainFileRel(req.params.id) });
 });
 
+// Um arquivo do projeto, para o visualizador (imagens, PDF, baixar). Nunca sai
+// da pasta do projeto nem entrega as pastas internas (.output, .yjs). SVG/HTML
+// vão num sandbox: não executam scripts nem no endereço do LaTeX Live.
+app.get('/api/projects/:id/raw', (req, res) => {
+  try {
+    const { abs, rel, segments } = resolveProjectPath(req.params.id, String(req.query.path || ''));
+    if (!rel || segments.some((seg) => seg.startsWith('.'))) return res.status(400).send('Caminho inválido.');
+    if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) return res.status(404).send('Arquivo não encontrado.');
+    res.set('X-Content-Type-Options', 'nosniff');
+    // Só onde há script possível (o visualizador de PDF do Chrome não abre dentro de um sandbox).
+    if (/\.(svg|html?|xhtml|xml)$/i.test(rel)) res.set('Content-Security-Policy', "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'");
+    if (/\.(html?|xhtml|js|mjs)$/i.test(rel)) res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(path.basename(rel))}"`);
+    if (req.query.download) res.attachment(path.basename(rel));
+    res.sendFile(abs);
+  } catch (err) {
+    res.status(400).send(String((err && err.message) || err));
+  }
+});
+
 app.get('/api/projects/:id/files', (req, res) => {
   res.json({ tree: buildFileTree(req.params.id, projectDir(req.params.id), '') });
 });
@@ -973,7 +992,7 @@ app.post('/api/projects/:id/korpus', async (req, res) => {
 // Hocuspocus direct connection rather than straight to disk, so they show up
 // live in every open editor and merge with whatever people are typing,
 // instead of being overwritten by the next onStoreDocument.
-const AI_TEXT_EXT = ['tex', 'bib', 'sty', 'cls', 'bst', 'txt', 'md', 'cfg', 'clo', 'def'];
+const AI_TEXT_EXT = ['tex', 'bib', 'sty', 'cls', 'bst', 'txt', 'md', 'cfg', 'clo', 'def', 'csv', 'tsv', 'json', 'yml', 'yaml', 'py', 'r'];
 const AI_MAX_READ_CHARS = 60_000;
 const AI_MAX_TURNS = 12;
 const AI_SKIP_DIRS = new Set(['__MACOSX']);
