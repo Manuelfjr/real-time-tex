@@ -30,13 +30,23 @@ else
 fi
 
 echo "== tectonic =="
-if ! command -v tectonic >/dev/null 2>&1; then
-  tmpdir="$(mktemp -d)"
-  (cd "$tmpdir" && curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh)
-  mv "$tmpdir/tectonic" "$LOCAL_BIN/"
-  rm -rf "$tmpdir"
-else
+# No Linux x86_64, usa o binário musl (estático): o do drop-sh depende de uma
+# glibc recente e falha em servidores mais antigos ("GLIBC_2.39 not found").
+TECTONIC_VERSION="${TECTONIC_VERSION:-0.17.0}"
+if command -v tectonic >/dev/null 2>&1 && tectonic --version >/dev/null 2>&1; then
   echo "já instalado: $(tectonic --version | head -1)"
+else
+  command -v tectonic >/dev/null 2>&1 && echo "o tectonic instalado não roda nesta máquina — substituindo"
+  tmpdir="$(mktemp -d)"
+  if [ "$(uname -s)-$(uname -m)" = "Linux-x86_64" ]; then
+    curl -fL -o "$tmpdir/t.tgz" "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+    tar -xzf "$tmpdir/t.tgz" -C "$tmpdir" tectonic
+  else
+    (cd "$tmpdir" && curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh)
+  fi
+  mv "$tmpdir/tectonic" "$LOCAL_BIN/tectonic"
+  rm -rf "$tmpdir"
+  echo "instalado: $("$LOCAL_BIN/tectonic" --version | head -1)"
 fi
 
 echo "== cloudflared =="
