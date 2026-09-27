@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>LaTeX Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+<link rel="stylesheet" href="style.css" />
+<style>
+  body { width: 1360px; height: 800px; overflow: hidden; }
+  .fake-page {
+    width: 620px;
+    background: #fff;
+    box-shadow: var(--shadow-md);
+    padding: 56px 60px;
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1a1a1a;
+    flex-shrink: 0;
+  }
+  .fake-page h1 { font-size: 18px; text-align: center; margin: 0 0 6px; }
+  .fake-page .authors { text-align: center; font-size: 12px; color: #444; margin-bottom: 22px; }
+  .fake-page .abstract-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .fake-page p { font-size: 11.5px; line-height: 1.55; text-align: justify; margin: 0 0 12px; }
+  .fake-page table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin: 14px 0; }
+  .fake-page th, .fake-page td { border-bottom: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+  .fake-page .eq { text-align: center; font-style: italic; margin: 14px 0; font-size: 12px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="assets/kunumi-mark.png" alt="" class="brand-mark" />
+      <span class="brand-name">LaTeX Live</span>
+    </div>
+    <span class="topbar-sep">/</span>
+    <input type="text" class="project-name-input" value="dissertacao-fonte-latex" readonly />
+    <div class="status" id="status">Salvo</div>
+    <div class="presence-row" title="Quem está editando agora">
+      <div class="presence-dot" style="background:#3A2FDF">MF</div>
+      <div class="presence-dot" style="background:#F04E44">RQ</div>
+      <div class="presence-dot" style="background:#246A3C">JM</div>
+    </div>
+    <label class="autocompile-toggle">
+      <input type="checkbox" checked />
+      <span class="switch"></span>
+      <span class="switch-label">Autocompilar</span>
+    </label>
+    <button class="btn btn-primary">Compilar agora</button>
+    <a class="btn btn-secondary" href="#">Baixar PDF</a>
+    <button class="btn btn-secondary">✨ Assistente</button>
+  </header>
+
+  <main class="workspace">
+    <aside class="file-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Arquivos do projeto</div>
+        <div class="sidebar-actions">
+          <button type="button" class="upload-btn">+ Pasta</button>
+          <label class="upload-btn">+ Upload</label>
+        </div>
+      </div>
+      <div class="tree-row main-file-row active">
+        <span class="file-icon">📌</span>
+        <span class="file-name">main.tex</span>
+      </div>
+      <ul class="file-list">
+        <li>
+          <div class="tree-row"><span class="folder-caret">▾</span><span class="file-icon">📁</span><span class="file-name">capitulos</span></div>
+          <ul class="tree-children">
+            <li><div class="tree-row"><span class="file-icon">📄</span><span class="file-name">introducao.tex</span></div></li>
+            <li><div class="tree-row active"><span class="file-icon">📄</span><span class="file-name">metodologia.tex</span></div></li>
+            <li><div class="tree-row"><span class="file-icon">📄</span><span class="file-name">resultados.tex</span></div></li>
+          </ul>
+        </li>
+        <li>
+          <div class="tree-row"><span class="folder-caret">▾</span><span class="file-icon">📁</span><span class="file-name">imagens</span></div>
+          <ul class="tree-children">
+            <li><div class="tree-row"><span class="file-icon">🖼️</span><span class="file-name">arquitetura.png</span></div></li>
+            <li><div class="tree-row"><span class="file-icon">🖼️</span><span class="file-name">resultados_ks.png</span></div></li>
+          </ul>
+        </li>
+        <li><div class="tree-row"><span class="file-icon">📄</span><span class="file-name">referencias.bib</span></div></li>
+      </ul>
+      <p class="sidebar-hint">Clique num arquivo .tex/.bib para abri-lo. Use "⇥" pra inserir uma referência, ✎ para renomear e ✕ para excluir.</p>
+    </aside>
+
+    <div class="split-area">
+      <section class="pane editor-pane">
+        <textarea id="editor">\section{Metodologia}
+O modelo foi treinado sobre uma amostra de
+\SI{40000}{} contratos, com particao temporal
+para evitar vazamento de informacao futura.
+
+\begin{equation}
+  \label{eq:score}
+  s_i = \sigma(w^\top x_i + b)
+\end{equation}
+
+A Tabela~\ref{tab:metricas} resume as principais
+metricas de desempenho no conjunto de teste.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    Modelo & AUC & KS \\
+    \midrule
+    GBRT   & 0.81 & 0.44 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Metricas de classificacao}
+  \label{tab:metricas}
+\end{table}
+</textarea>
+      </section>
+      <div class="divider"></div>
+      <section class="pane preview-pane">
+        <div class="preview-toolbar">
+          <button class="zoom-btn">−</button>
+          <button class="zoom-btn zoom-fit">Ajustar à largura</button>
+          <button class="zoom-btn">+</button>
+        </div>
+        <div class="preview-container">
+          <div class="pdf-viewer" style="align-items:center">
+            <div class="pdf-page fake-page">
+              <h1>Fairness em Modelos de Crédito: um Estudo de Caso</h1>
+              <div class="authors">R. Viola, M. Ferreira &middot; Instituto Kunumi</div>
+              <div class="abstract-title">Resumo</div>
+              <p>Este trabalho avalia a disparidade na taxa de inadimplência prevista entre grupos demográficos em um modelo de concessão de crédito, propondo uma métrica de recalibração aplicável em produção sem retraining completo do modelo.</p>
+              <div class="eq">s<sub>i</sub> = &sigma;(w&#8868;x<sub>i</sub> + b)</div>
+              <table>
+                <tr><th>Modelo</th><th>AUC</th><th>KS</th></tr>
+                <tr><td>GBRT</td><td>0.81</td><td>0.44</td></tr>
+                <tr><td>Regressão logística</td><td>0.76</td><td>0.38</td></tr>
+              </table>
+              <p>Os resultados indicam que a recalibração por grupo reduz a disparidade em 34% sem impacto relevante na métrica global de discriminação (AUC), mantendo a operação dentro dos limites de risco definidos pela política de crédito vigente.</p>
+            </div>
+          </div>
+          <div class="page-indicator">1 / 14</div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="chat-panel open">
+      <div class="chat-header">
+        <div class="sidebar-title">Assistente de escrita</div>
+        <button type="button" class="chat-close-btn">✕</button>
+      </div>
+      <div class="chat-messages">
+        <div class="chat-msg user">Deixa essa tabela alinhada e do tamanho certo pra página</div>
+        <div class="chat-msg assistant">Ajustei com <code>booktabs</code> e centralizei as colunas AUC e KS. Troquei <code>\hline</code> por <code>\toprule</code>/<code>\bottomrule</code>, fica mais limpo. ✓ aplicado no editor.</div>
+        <div class="chat-msg user">Tem algo parecido na rede do instituto?</div>
+        <div class="chat-msg assistant">Sim — a Roberta tem um paper sobre fairness em crédito com métrica parecida. Quer que eu puxe a referência pro seu <code>.bib</code>?</div>
+      </div>
+      <form class="chat-input-row">
+        <textarea class="chat-input" placeholder="Escreva sua pergunta…" rows="2"></textarea>
+        <button type="button" class="btn btn-primary chat-send-btn">Enviar</button>
+      </form>
+    </aside>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js"></script>
+  <script>
+    window.addEventListener('load', () => {
+      CodeMirror.fromTextArea(document.getElementById('editor'), {
+        mode: 'stex',
+        theme: 'material-darker',
+        lineNumbers: true,
+        lineWrapping: true,
+        tabSize: 2,
+        indentUnit: 2,
+      });
+    });
+  </script>
+</body>
+</html>

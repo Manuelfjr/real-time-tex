@@ -1,0 +1,99 @@
+\chapter{Reprodução}\label{apen:apendiceA}
+
+
+Neste capítulo, é disponibilizado todas as informações necessárias para reproduzir os resultados.
+
+\section{Hiperparâmetros do OPTICS}
+
+    \begin{itemize}
+        \item Aniso e Blobs: min\_samples=$7$, xi=$0.1$, min\_cluster\_size=$0.2$;
+        \item Varied: min\_samples=$7$, xi=$0.01$, min\_cluster\_size=0.2;
+        \item Moons: min\_samples=$7$, xi=$0.1$, min\_cluster\_size=0.1;
+        \item Circles: min\_samples: $7$, xi=$0.08$, min\_cluster\_size=0.1;
+        \item No Structure: min\_samples=$7$, xi=$0.05$, min\_cluster\_size=$0.1$.
+    \end{itemize}  
+
+\section{Hiperparâmetros para o $\beta^{4}$-\gls{IRT}}
+
+Nesta seção, uma visão geral dos parâmetros para configuração do modelo $\beta^{4}$-\gls{IRT} é disponibilizada. Abaixo, temos os parâmetros utilizados:
+\begin{itemize}
+    \item \textbf{Learning Rate:} $0.1$
+    \item \textbf{Epochs:} $10000$
+    \item \textbf{Number of Initializations:} $1000$
+    \item \textbf{Random Seed:} $1$
+    \item \textbf{Tolerance:} $1.0 \times 10^{-8}$
+    \item \textbf{Set Priors:} \texttt{True}
+\end{itemize}
+
+Estas configurações influenciam no processo de otimização, criterio de convergência e estrategia de inicialização para o $\beta^4$-\gls{IRT}. É imporante ajustar estes parâmetros baseado nestas características  especificas para certificação de reprodutibilidade.
+
+
+\section{Configurações dos conjuntos de dados sintéticos}
+
+Todos os conjuntos de dados sintéticos foram criados com tamanho de amostra de $500$, exceto o conjunto No Structure, que foi gerado com tamanho de amostra de $1000$. O estado aleatório foi consistentemente definido como $0$ para todos os conjuntos de dados utilizando a biblioteca \textsf{NumPy} \cite{numpy}, com exceção dos conjuntos No Structure e Varied, nos quais foi utilizado o estado aleatório $170$, e do conjunto Blobs, no qual o estado aleatório foi especificamente definido como $8$.
+
+\begin{itemize}
+    \item \textbf{Aniso:}
+    \begin{itemize}
+        \item Método: O conjunto sintético Aniso foi gerado utilizando o método \textsf{make\_blobs} do Scikit-Learn, permitindo a criação de agrupamentos anisotrópicos.
+        \item Matrizes de rotação: [$0.6$, $-0.6$], [$-0.4$, $0.8$]
+    \end{itemize}
+    \item \textbf{Noisy Circles:}
+    \begin{itemize}
+        \item Método: O conjunto Noisy Circles foi gerado utilizando o método \textsf{make\_circles} do Scikit-Learn, introduzindo ruído em agrupamentos circulares.
+        \item Fator de ruido: $0.5$
+        \item Ruído: $0.05$
+    \end{itemize}
+    \item \textbf{Noisy Moons:}
+    \begin{itemize}
+        \item Método: O conjunto Noisy Moons foi gerado utilizando o método \textsf{make\_circles} do Scikit-Learn, resultando em agrupamentos em formato de lua com adição de ruído.
+        \item Ruído: $0.05$
+    \end{itemize}
+    \item \textbf{Blobs:}
+    \begin{itemize}
+        \item Método: O conjunto Blobs foi gerado utilizando o método \textsf{make\_blobs} do Scikit-Learn, produzindo agrupamentos Gaussianos com centros e desvios padrão especificados.
+        \item \textit{Random state}: $8$
+    \end{itemize}
+    \item \textbf{Varied:}
+    \begin{itemize}
+        \item Método: O conjunto Varied foi gerado utilizando o método \textsf{make\_blobs} do Scikit-Learn, criando agrupamentos Gaussianos escalados com diferentes desvios padrão entre os clusters.
+        \item Desvios padrão dos clusters: $1.0$, $2.5$ e $0.5$
+    \end{itemize}
+    \item \textbf{No Structure:}
+    \begin{itemize}
+        \item Método: O conjunto No Structure foi gerado com tamanho de amostra e número de atributos específicos, com o objetivo de representar um conjunto de pontos distribuídos aleatoriamente, sem qualquer estrutura inerente.
+        \item Tamanho da amostra: $1000$
+        \item Número de atributos: $2$
+    \end{itemize}
+\end{itemize}
+
+Esses parâmetros de geração permitem a criação reprodutível dos conjuntos de dados sintéticos, facilitando a experimentação consistente e a avaliação de algoritmos de agrupamento.
+
+\section{Geração de partições aleatórias}
+
+O Algoritmo \ref{alg:random:partitions} descreve as etapas para gerar partições aleatórias e incorporá-las ao conjunto de modelos.
+
+\begin{algorithm}
+\caption{Incorporação de Partições Aleatórias}
+\begin{algorithmic}
+% \State Gerar uma matriz aleatória, com $N$ instâncias e $P$ partições.
+\State Para cada partição gerada, fixar um \textit{Random State} $p+1$, onde $p = 0, 1, 2, \dots, P$.
+
+\For{cada conjunto de dados}
+    \For{$p = 0, 1, \dots, P$}
+    \State Ajustar cada modelo de agrupamento e agrupar as instâncias.
+    
+    %\State Adição de $p$ partições para cada instância a um dos $K$ clusters.
+
+    \State Atribuir aleatoriamente cada instância a um dos $K$ grupos, onde $K$ é o número conhecido de clusters no conjunto de dados, ou $K=10$ para o conjunto No Structure.
+    
+    \State Calcular a matriz de respostas.
+    
+    \State Calcular os modelos artificiais (\textit{Best} e \textit{Average response} (as partições aleatórias não são consideradas para determinar suas respostas).
+    
+    \State Ajustar o modelo $\beta^{4}$-\gls{IRT} com a matriz de respostas ($p_{ij}$).
+    \EndFor
+\EndFor
+\end{algorithmic}
+\label{alg:random:partitions}
+\end{algorithm}

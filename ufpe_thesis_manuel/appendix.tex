@@ -1,0 +1,33 @@
+
+
+% ----------------------
+% força para que não exiba subtítulos em apêndices no sumário
+% -----------------------
+
+\begin{apendicesenv}
+\addtocontents{toc}{\protect\setcounter{tocdepth}{1}}
+\makeatletter
+\addtocontents{toc}{%
+  \begingroup
+  \let\protect\l@chapter\protect\l@section
+  \let\protect\l@section\protect\l@subsection
+}
+\makeatother
+
+% Imprime uma página indicando o início dos apêndices
+% \partapendices
+
+% \input{appendix/apendiceA}
+% \input{appendix/apendiceB}
+% \input{appendix/apendiceC}
+\input{appendix/deducoesb4}
+\input{appendix/beta4beta3_experimentos}
+\input{appendix/reproduce}
+\input{appendix/figuras_resultados}
+
+
+\addtocontents{toc}{\endgroup}
+\end{apendicesenv}
+
+
+

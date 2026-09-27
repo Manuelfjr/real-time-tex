@@ -2,6 +2,7 @@ node_modules/
 projects/*
 !projects/849b154a-f43a-4466-95a5-a924ad794a39/
 projects/*/.output/
+projects/*/.yjs/
 *.log
 .DS_Store
 .run-logs/

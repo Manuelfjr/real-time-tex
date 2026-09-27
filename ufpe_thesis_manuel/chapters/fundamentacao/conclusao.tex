@@ -1,0 +1,39 @@
+\chapter{Conclusão}\label{chap:n5_conclusao}
+
+A avaliação de modelos no cenário de \gls{AM}, especialmente no contexto não supervisionado, permanece como um dos desafios conceituais e metodológicos mais relevantes da área. Diferentemente do cenário supervisionado, no qual métricas externas podem ser diretamente calculadas a partir de rótulos verdadeiros, tarefas como agrupamento exigem abordagens que operem na ausência de referência explícita. Nesse contexto, esta dissertação propôs uma estrutura probabilística unificada fundamentada na \gls{TRI}, reformulando o problema de avaliação como um processo inferencial baseado na interação entre modelos e instâncias.
+
+\section{Contribuições}
+
+A primeira parte desta dissertação concentrou-se no aprimoramento metodológico da modelagem \gls{TRI} aplicada ao contexto de \gls{AM}. Foi apresentado o modelo $\beta^{4}$-\gls{IRT}, uma extensão do $\beta^{3}$-\gls{IRT}, no qual o parâmetro de discriminação é decomposto em componentes de sinal e magnitude. Essa reformulação mitigou problemas estruturais de não-identificabilidade presentes no modelo anterior, promovendo maior estabilidade e melhor recuperação de parâmetros. Os experimentos demonstraram que o $\beta^{4}$-\gls{IRT} apresenta desempenho superior na recuperação do sinal da discriminação, aspecto particularmente relevante em cenários com instâncias ruidosas ou ambíguas. Além disso, evidenciou-se sua eficácia na detecção de ruído de rótulo, superando o $\beta^{3}$-\gls{IRT} e igualando ou superando abordagens baseadas em votação majoritária. Assim, o $\beta^{4}$-\gls{IRT} não apenas aprimora a modelagem teórica da discriminação, mas fortalece a interpretação de dificuldade e habilidade no contexto de sistemas de \gls{IA}.
+
+A segunda parte desta dissertação abordou diretamente o problema da avaliação de agrupamentos sem acesso a rótulos verdadeiros. Foi proposto o método CLAIRE, que formula a avaliação de agrupamento como um problema de estimação de habilidade latente via TRI, utilizando uma matriz de respostas construída a partir da concordância entre modelos quanto ao agrupamento de pares de instâncias. Sob essa perspectiva, modelos mais informativos tendem a concordar entre si em decisões estruturais relevantes, enquanto instâncias difíceis são aquelas nas quais apenas modelos de alta habilidade alcançam consenso.
+
+Os resultados experimentais demonstraram que o ranqueamento de modelos produzido pelo \gls{CLAIRE} apresenta alta correlação com métricas externas tradicionais, mesmo sem utilizar qualquer informação de rótulo durante o processo de estimação. Além disso, o método mostrou-se robusto à inserção de partições aleatórias no conjunto de modelos avaliados, preservando a ordenação relativa dos modelos informativos. Essa propriedade é particularmente importante em cenários reais, nos quais o pool de modelos pode conter abordagens heterogêneas ou pouco informativas.
+
+A integração entre o $\beta^{4}$-\gls{IRT} e o \gls{CLAIRE} estabelece uma contribuição conceitual central desta dissertação: a modelagem de habilidade latente como meio mais robusto para avaliação no cenário de aprendizado não supervisionado. Nessa formulação, a qualidade de um modelo deixa de ser interpretada como uma propriedade puramente estática da partição produzida e passa a emergir da interação entre modelos e instâncias, considerando explicitamente níveis diferenciados de dificuldade e discriminação. Essa mudança de paradigma amplia a compreensão sobre o comportamento de algoritmos de agrupamento, permitindo não apenas ranquear modelos, mas também identificar regiões de incerteza, instâncias ambíguas e possíveis fontes de ruído nos dados.
+
+Considerando o ponto de vista metodológico, essa dissertação contribui das seguintes formas:
+
+\begin{itemize}
+    \item Estabelecer uma parametrização mais estável e interpretável para modelos de TRI aplicados a respostas no intervalo $(0, 1)$;
+    \item Introduzir um \textit{framework} probabilístico para avaliação de agrupamento independente de rótulos de referência;
+    \item Demonstrar empiricamente que a habilidade latente estimada pode servir como substituto robusto para métricas tradicionais;
+    \item Evidenciar que a modelagem conjunta de habilidade, dificuldade e discriminação fornece informações adicionais que métricas clássicas não capturam.
+\end{itemize}
+
+\section{LimitaçÕES}
+
+Apesar dos avanços apresentados, algumas limitações permanecem. O método \gls{CLAIRE} depende da diversidade e qualidade do conjunto de modelos considerados, podendo ser sensível a pools excessivamente homogêneos. Do ponto de vista computacional, a construção da matriz baseada em pares de instâncias pode tornar-se custosa para conjuntos de dados muito grandes, indicando a necessidade de estratégias de amostragem ou aproximação.
+
+\section{Trabalhos futuros}
+
+Como direções futuras, podemos listar:
+
+\begin{itemize}
+    \item[i] Extensão do \gls{CLAIRE} para lidar diretamente com modelos probabilísticos ou fuzzy, preservando incertezas na matriz de respostas;
+    \item[ii] Desenvolvimento de versões escaláveis para grandes volumes de dados;
+    \item[iii] Aplicação da estrutura proposta a outras tarefas não supervisionadas, como detecção de anomalias ou aprendizado de representações;
+    \item[iv] Investigação de versões bayesianas do modelo, incorporando incerteza nos parâmetros estimados.
+\end{itemize}
+
+Esta dissertação demonstra que a \gls{TRI} oferece um arcabouço teórico sólido e flexível para reformular o problema de avaliação no aprendizado não supervisionado. Ao integrar avanços na modelagem da discriminação com uma nova interpretação baseada em concordância entre modelos, o trabalho estabelece a habilidade latente como um princípio geral para avaliação, contribuindo tanto para o desenvolvimento teórico da área quanto para aplicações práticas em cenários onde a ausência de rótulos é a regra.

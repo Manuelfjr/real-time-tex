@@ -1,0 +1,147 @@
+\section{$\beta^{4}$-\gls{IRT}}
+
+Como mencionado na seção anterior, o modelo $\beta^3$-\gls{IRT} possui algumas limitações, podendo afetar diretamente a interpretação e a estimação dos parâmetros latentes. Motivado por esta limitação, foi proposto o modelo $\beta^4$-\gls{IRT}, cuja \gls{CCI} é dada pela equação \ref{eq:fo}.
+
+\begin{equation}
+    \label{eq:fo}
+    E[p_{ij} | \theta_i, \delta_j, \omega_j, \tau_j] = \frac{1}{1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j\cdot\omega_j }\cdot\big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j\cdot\omega_j }}.
+\end{equation}
+
+Na equação \ref{eq:ep_birt} o parâmetro $a_j$ é substituido pelo produto de dois parâmetros na equação \ref{eq:fo}, $\omega_j$ e $\tau_j$, os quais representam o valor absoluto do discriminante e o sinal associado, respectivamente. Essa decomposição do parâmetro $a_j$ reduz o problema de simetria existente do $\beta^{3}$-\gls{IRT}, permitindo que a amplitude e o sinal do discriminante serão otimizados de forma separada.
+
+
+Na equação \ref{eq:model_def}, para o modelo $\beta^{3}$-\gls{IRT}, o suporte para os parâmetros $\theta_i$ e $\delta_j$ é definido no intervalo $(0, 1)$, enquanto $a_j$ possui um suporte definido em $(-\infty, \infty)$. Já para o modelo proposto, $\theta_i$ e $\delta_j$ mantêm-se o mesmo suporte, contudo ao dividirmos o parâmetro $a_j$ em duas partes, temos que $\tau_j$ e $\omega_j$ assumem um suporte definido entre $(-1, 1)$ e $(0, \infty)$, respectivamente. Com o intuito de melhorar o processo de otimização, foram aplicadas funções de ligações para a remoção das limitações de suporte. O processo de estimação será utilizando o método de gradiente descendente. Dessa forma, o método de estimção utilizado no $\beta^{4}$-\gls{IRT} não atualiza os valores dos quatro parâmetros diretamente, ao invês disso, é feito uma re-parametrização do modelo, introduzindo quatro novos parâmetros ($t_i$, $d_j$, $b_j$ e $o_j$) com valores definidos em $\mathbb{R}$, sendo usados para estimar os valores originais dos parâmetros, utilizando das funções de ligações, sendo elas definidas nas equações \ref{eq:hyperparams1} e \ref{eq:hyperparams2}.
+
+
+\begin{align}
+\label{eq:hyperparams1}
+    \theta_i &= \sigma(t_i) = \frac{1}{1 + e^{-t_i}}, & \delta_j &= \sigma(d_j), \\ %\tag{6,7} \\
+    \label{eq:hyperparams2}
+    \omega_j &= \text{softplus}(o_j) = \ln(1 + e^{o_j}), & \tau_j &= \tanh(b_j) = \frac{e^{b_j} - e^{-b_j}}{e^{b_j} + e^{-b_j}}. %\tag{8,9}
+\end{align}
+
+A estimação via método do gradiente descendente para o modelo $\beta^{4}$-\gls{IRT}, para os parâmetros $t_i, d_j, o_j$ e $b_j$, possuirá como função de custo a equação \ref{eq:crossentropy}.
+
+\begin{equation}
+    \label{eq:crossentropy}
+    H = -\sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \ln(\hat{p}_{ij}),
+\end{equation}
+
+Sendo $\hat{p}_{ij}$ a resposta estimada, calculada utilizando as equações \ref{eq:hyperparams1}, \ref{eq:hyperparams2} e \ref{eq:fo}. Além disso, as derivadas parciais de $H$ com respeito a $d_j$, $t_i$,  $o_j$ e $b_j$ são dadas pelas equações  (\ref{eq:d1}), (\ref{eq:d2}), (\ref{eq:d3}) e (\ref{eq:d4}).
+
+\begin{align}
+    \label{eq:d1}
+    &\frac{\partial H}{\partial d_j} =  \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \omega_j\cdot \tau_j \cdot \Delta(\delta_j) \cdot \Phi(\theta_i, \delta_j)^{\omega_j\cdot \tau_j} \cdot \hat{p}_{ij}\cdot e^{-d_j}\cdot \sigma(d_j)^{2},\\
+    \label{eq:d2}
+    &\frac{\partial H}{\partial t_i} = - \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \omega_j\cdot \tau_j \cdot \Theta(\theta_i) \cdot \Phi(\theta_i, \delta_j)^{\omega_j\cdot \tau_j} \cdot \hat{p}_{ij} \cdot e^{-t_i}\cdot \sigma(t_i)^{2},\\
+    \label{eq:d3}
+    &\frac{\partial H}{\partial o_j} =  \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \tau_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j \cdot \omega_j} \cdot \ln(\Phi(\theta_i, \delta_j)) \cdot \hat{p}_{ij} \cdot \sigma(o_j),\\
+    \label{eq:d4}
+    &\frac{\partial H}{\partial b_j} =  \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \omega_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j \cdot \omega_j} \cdot \ln(\Phi(\theta_i, \delta_j)) \cdot \hat{p}_{ij} \cdot [1 - tanh(b_j)^{2}],
+\end{align}
+
+\noindent aonde:
+
+\begin{equation} \label{eq:summary_params}
+    \Phi(\theta_i, \delta_j) = \left( \frac{\delta_j}{1 - \delta_j} \cdot \frac{\theta_i}{1 - \theta_i} \right)^{-1}, \quad 
+    \Theta(\theta_i) = \frac{1}{\theta_i \cdot (1 - \theta_i)}, \quad 
+    \Delta(\delta_j) = \frac{1}{\delta_j \cdot (1 - \delta_j)}.
+\end{equation}
+
+
+Por fim, considerando as derivadas parciais calculadas, os parâmetros do modelo serão atualizados por meio do método gradiente descendente, de acordo com as equações  \ref{eq:gd1} e \ref{eq:gd2}.
+
+\begin{align}
+\label{eq:gd1}
+    d_j^{(n+1)} &= d_j^{(n)} - \eta \cdot \frac{\partial H}{\partial d_j^{(n)}}, &
+        t_i^{(n+1)} &= t_i^{(n)} - \eta \cdot \frac{\partial H}{\partial t_i^{(n)}},\\ \label{eq:gd2}
+    o_j^{(n+1)} &= o_j^{(n)} - \eta \cdot \frac{\partial H}{\partial o_j^{(n)}}, &
+    b_j^{(n+1)} &= b_j^{(n)} - \eta \cdot \frac{\partial H}{\partial b_j^{(n)}}.
+\end{align}
+
+Com objetivo de otimizar o processo de estimação e recuperação dos parâmetros reais, definimos valores calculados como informação a priori, para alguns parâmetros, com o intuito de lidar melhor com o problema de simetria. A nova formulação nos permite selecionar informações a priori mais sensiveis para os parâmetros, garantindo uma estimção mais acurada. Ela pode ser definida abaixo:
+
+\begin{itemize}
+    \item Habilidade: fixando $t_i^{(0)}$ tal que $\theta_i^{(0)} = \sigma(t_i^{(0)}) = N^{-1}\left(\sum_{j=1}^N p_{ij}\right)$;
+    
+    \item Dificuldades: fixando $d_j^{(0)}$ tal que $\delta_j^{(0)} = \sigma(d_j^{(0)}) = 1 - M^{-1}\left(\sum_{i=1}^M p_{ij}\right)$;
+    \item Magnitude do discriminante: fixando $o_j^{(0)}$ tal que $\omega_j^{(0)} = \text{softplus}(o_j^{(0)}) = 1$;
+    \item Sinal do discriminante: fixando $\tau_j = \rho(\vec{\theta}^{(0)}, \vec{p}_j)$, aonde $\rho$ é o coeficiente de correlação de Pearson, $\vec{\theta}^{(0)} = (\theta_1^{(0)},\ldots, \theta_N^{(0)})$ e $\vec{p}_j = (p_{1j},\ldots, p_{Nj})$.
+\end{itemize}
+
+Os valores a priori definidos para habilidades e dificuldades são intuitivas, uma vez que habilidades maiores levam para valores medios de respostas maiores, e o contrário para as dificuldades também é válido. 
+Considerando o parâmetro de sinal para o discriminante, tínhamos dois requisitos:
+
+\begin{itemize}
+    \item[i] Discriminação positiva, a resposta esperada aumenta com a habilidade, já para discriminações negativas, habilidades maiores levam a respostas menores;
+    
+    \item[ii] seu suporte precisa estar no intervalo $[-1, 1]$, portanto, a correlação entre habilidades e respostas para cada item se presta bem a isso.
+\end{itemize}
+
+Com o intuito de evitar a inversão dos sinais durante as iterações, especialmente para discriminações muito pequenas próximas de 0, foi mantido as estimativas de $\tau_j$ fixas e otimizamos apenas as magnitudes das discriminações.
+
+O algoritmo \ref{alg:birt-gd} evidencia o processo de estimação dos parâmetros para a utilização do modelo $\beta^4$-\gls{IRT}. Na implementação, note que é possivel fixar um número de iterações iniciais aonde o discriminante é mantido fixo com o intuito de evitar o problema de simétria e inversão de sinais durante o processo do algoritmo.
+
+
+\begin{algorithm}[!htp]
+\caption{$\beta^{4}$-IRT com irfomação a priori} 
+\label{alg:birt-gd}
+\begin{algorithmic}[1]
+\Require Matriz de resposta $\mathbf{P}$, aonde cada elemeto $p_{ij}$ corresponde a resposta observada do respondente $i$ para o item $j$, taxa de aprendizado $\eta$, número de epocas de treino com parâmetro de discriminação fixado (\textit{n\_inits}), total de épocas de treinamento (\textit{n\_epochs}).
+% \State Set number of initialisations (n\_inits) with discrimination param fixed.
+\State Inicializa aleatoriamente $t_i^{(0)}$, $d_j^{(0)}$ apartir de $N(0, 1)$;
+\State Fixe $o_j^{(0)}$ tal que $\omega_j^{(0)} = $ softplus($o_j^{(0)}$) = 1%\leftarrow 2.00237$ and $b_j^{(0)} \leftarrow 0.50968$; \Comment{Such that $\text{softplus}\left(o_j^{(0)}\right) \cdot \text{tanh}\left(b_j^{(0)}\right) \approx 1$.}
+%0.5096851
+%2.002374
+%$t_i, d_j \sim N(0,1)$ e $b_j\cdot o_j\rightarrow 1$
+\State Fixe $\tau_j = \rho(\vec{\theta}^{(0)}, \vec{p_j})$ \Comment{aonde  $\rho$ é o coeficiente de correlação de Pearson, $\vec{\theta}^{(0)} = (\theta_1^{(0)},\ldots, \theta_N^{(0)})$ e $\vec{p}_j = (p_{1j},\ldots, p_{Nj})$.}
+ 
+\State Fixe $t_i^{(0)}$ tal que $\theta_i^{(0)} = \sigma(t_i^{(0)}) = N^{-1}\left(\sum_{j=1}^N p_{ij}\right)$.
+    
+\State Fixe $d_j^{(0)}$ tal que $\delta_j^{(0)} = \sigma(d_j^{(0)}) = 1 - M^{-1}\left(\sum_{i=1}^M p_{ij}\right)$.
+
+\State Fixe $n \leftarrow 0$
+\For { $n < $ \textit{n\_epochs} }
+
+    % \If {$n < $ \textit{n\_inits}}
+    %     \State Keep $o_j$ and $b_j$ fixed;
+        %\State Stay the params $o_j$ and $b_j$ fixed during the epoch.
+
+    % \ElsIf {k $\geq$ n\_inits}
+    %     \State Add the params $o_j$ and $b_j$ to the iterative process
+        %\State Add the params $o_j$ and $b_j$ to the iterative process.
+    % \EndIf
+    \State Calcula a resposta estimada usando a equação (\ref{eq:fo});
+    \State Calcula o \textit{loss} usando a equação (\ref{eq:crossentropy});
+    \State Calcula as derivadas parciais usando a equação (\ref{eq:d1}), (\ref{eq:d2}), (\ref{eq:d3}) e (\ref{eq:d4}); 
+    \State Atualiza $d_j^{(n+1)}$ e $t_i^{(n+1)}$ de acordo com a equação (\ref{eq:gd1});
+    \If{$n \geq $ \textit{n\_inits}}
+    \State Atualiza $o_j^{(n+1)}$ e $b_j^{(n+1)}$ de acordo com a equação (\ref{eq:gd2});
+        % \State $t_i$ and $d_j$ receive the value obtained from the partial derivates
+        %\State $t_i$ and $d_j$ Receive the value obtained from the partial derivates
+    
+    \Else
+        \State Set $o_j^{(n+1)}\leftarrow o_j^{(n)}$ e $b_j^{(n+1)}\leftarrow b_j^{(n)}$;
+        % \State $o_j^{\text{(\text{k+1})}} \leftarrow o_j^{(\text{k})} - \eta\cdot\frac{\partial \omega_j}{\partial o_j^{(\text{k})}}$
+        % \State $b_j^{\text{(\text{k+1})}} \leftarrow b_j^{(\text{k})} - \eta\cdot\frac{\partial \tau_j}{\partial b_j^{(\text{k})}}$
+        %\State $o_j$ and $b_j$ are updated by gradient method
+    \EndIf
+    % \State $t_i^{(\text{k+1})} \leftarrow t_i^{(\text{k})} - \eta\cdot\frac{\partial \theta_i}{t_i^{\text{(k)}}}$
+    % \State $d_j^{(\text{k+1})} \leftarrow d_j^{(\text{k})} - \eta\cdot\frac{\partial \delta_j}{d_j^{\text{(k)}}}$
+
+    % \State $t_i$ and $d_j$ are updated by gradient method
+    %\State i += 1
+    \State $n \leftarrow n + 1$;
+\EndFor
+\State $\theta_i \leftarrow \sigma$($t_i$);
+\State $\delta_j \leftarrow \sigma$($d_j$);
+%\State $\omega_j \leftarrow$ softplus($o_j$);
+%\State $\tau_j \leftarrow$ tanh($b_j$);
+\State $a_j \leftarrow \omega_j \cdot \tau_j$;\\
+\Return Parâmetros estimados $\theta_i$, $\delta_j$ e $a_j$.
+\end{algorithmic}
+\end{algorithm}
+
+Em síntese, o modelo $\beta^{4}$-\gls{IRT} introduz uma reformulação estrutural, com foco em melhorar o problema de simetria $\beta^{3}$-\gls{IRT}, separando explicitamente sinal e magnitude do parâmetro de discriminação e incorporando uma estratégia de estimação mais estável via reparametrização e informação a priori. Essa modificação não apenas melhora a interpretabilidade dos parâmetros, mas também busca reduzir instabilidades observadas no processo de otimização, como inversões de sinal e dificuldades na recuperação consistente dos discriminantes. Assim, no Apêndice \ref{ap:beta3beta4}, é conduzida uma análise comparativa entre os modelos $\beta^{3}$ e $\beta^{4}$-\gls{IRT}, investigando sua capacidade de recuperação de parâmetros, estabilidade do processo de estimação e comportamento frente ao fenômeno de mudança de sinal, de modo a evidenciar os ganhos proporcionados pela nova parametrização proposta. A implementação atual do $\beta^{4}$-\gls{IRT} foi disponibilizada como pacote na \footnote{\href{https://pypi.org/project/birt-gd/}{https://pypi.org/project/birt-gd/}}{Python}, disponibilizada no \footnote{\href{https://github.com/Manuelfjr/birt-gd}{https://github.com/Manuelfjr/birt-gd}}{github}.
+
+A comparação empírica entre os modelos $\beta^3$-\gls{IRT} e $\beta^4$-\gls{IRT} (recuperação de parâmetros, experimento de Monte Carlo e robustez a ruído de rótulo) é apresentada em detalhe no Apêndice \ref{ap:beta3beta4} e em \cite{ferreirajunior2023beta4irtnewbeta3irtenhanced}.

@@ -1,0 +1,79 @@
+% ---
+% inserir lista de símbolos
+% ---
+\begin{simbolos}
+  \item[$\beta^{3}$-IRT] Modelo IRT, com suporte $(0, 1)$, com três parâmetros
+  \item[$\beta^{4}$-IRT] Modelo IRT, com suporte $(0, 1)$, com quatro parâmetros
+  
+  \item[$\theta_i$] Habilidade latente do respondente ou modelo $i$, com suporte em $(0,1)$
+  \item[$\delta_j$] Parâmetro de dificuldade do item $j$, com suporte em $(0,1)$
+  \item[$a_j$] Parâmetro de discriminação do item $j$ no modelo $\beta^3$-\gls{IRT} com suporte em $(-\infty, \infty)$
+  \item[$\omega_j$] Magnitude (valor absoluto) do parâmetro de discriminação no modelo $\beta^4$-\gls{IRT}, com suporte em $(0,\infty)$
+  \item[$\tau_j$] Sinal do parâmetro de discriminação no modelo $\beta^4$-\gls{IRT}, com suporte em $(-1,1)$
+  \item[$p_{ij}$] Resposta observada do respondente $i$ ao item $j$
+  \item[$\hat{p}_{ij}$] Resposta estimada pelo modelo para o par $(i,j)$
+  \item[$\mathbf{P}$] Matriz de respostas observadas
+  \item[$M$] Número de respondentes (ou modelos avaliados)
+  \item[$N$] Número de itens (ou instâncias avaliadas)
+  \item[$\sigma(\cdot)$] Função logística (sigmoide)
+  \item[$\text{softplus}(\cdot)$] Função de ativação $\ln(1 + e^{x})$
+  \item[$\tanh(\cdot)$] Função tangente hiperbólica
+  \item[$H$] Função de custo (entropia cruzada)
+  \item[$\eta$] Taxa de aprendizado do método de gradiente descendente
+  \item[$t_i$] Parâmetro reparametrizado associado à habilidade $\theta_i$
+  \item[$d_j$] Parâmetro reparametrizado associado à dificuldade $\delta_j$
+  \item[$o_j$] Parâmetro reparametrizado associado à magnitude da discriminação $\omega_j$
+  \item[$b_j$] Parâmetro reparametrizado associado ao sinal da discriminação $\tau_j$
+  \item[$\rho(\cdot,\cdot)$] Coeficiente de correlação de Pearson
+  \item[$\Phi(\theta_i,\delta_j)$] Razão $\frac{\delta_j/(1-\delta_j)}{\theta_i/(1-\theta_i)}$ utilizada na definição da CCI
+
+  \item[$w_j$] Magnitude do parâmetro de discriminação do item $j$ (equivalente a $\omega_j$ na formulação do modelo $\beta^4$-IRT)
+
+\item[$\Delta(\delta_j)$] Termo auxiliar associado à derivada da dificuldade, definido como $\frac{1}{\delta_j (1-\delta_j)}$
+
+\item[$\Theta(\theta_i)$] Termo auxiliar associado à derivada da habilidade, definido como $\frac{1}{\theta_i (1-\theta_i)}$
+
+\item[$\ln(\cdot)$] Logaritmo natural
+
+\item[$\frac{\partial H}{\partial x}$] Derivada parcial da função de custo $H$ em relação ao parâmetro $x$
+  
+  \item[$\mathbb{R}$] Conjunto dos números reais
+
+    % \item[$\mathcal{L}$] Função de verossimilhança do modelo
+
+  \item[$\ell(\cdot)$] Log-verossimilhança
+
+  \item[$K$] Número de clusters em um conjunto de dados
+
+  \item[$C_k$] $k$-ésimo cluster, com $k = 1, \dots, K$
+
+  % \item[$\mathcal{M}$] Conjunto (pool) de modelos de agrupamento
+
+  \item[$\alpha_{ij}$] Parâmetro da distribuição Beta associado ao par $(i,j)$
+
+  \item[$\beta_{ij}$] Parâmetro da distribuição Beta associado ao par $(i,j)$
+
+  \item[$\mathrm{Beta}(\alpha,\beta)$] Distribuição Beta com parâmetros $\alpha$ e $\beta$
+
+  \item[$\mathrm{RSE}$] Erro relativo quadrático (\textit{Relative Squared Error})
+
+  \item[$P$] Número de partições aleatórias inseridas no conjunto de modelos
+
+  \item[$\mathbb{I}(\cdot)$] Função indicadora
+
+  \item[$\sim$] Distribuído como
+
+    
+  \item[$\epsilon$] Parâmetro de vizinhança do DBSCAN
+
+  \item[$\xi$] Parâmetro de separação de clusters no OPTICS
+
+  \item[$\mathrm{min\_samples}$] Número mínimo de amostras para formação de cluster
+
+  \item[$\mathrm{min\_cluster\_size}$] Tamanho mínimo de cluster no OPTICS
+  
+  \item[$\in$] Pertence a
+\end{simbolos}
+% ---
+
+

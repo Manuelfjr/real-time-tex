@@ -1,0 +1,241 @@
+\chapter{Deduções para o $\beta^4$-\gls{IRT}}
+\label{ap:deducoes}
+
+Aqui nos calculamos as derivadas parciais da Equação \ref{eq:crossentropy} com respeito a $t_i$, $d_j$, $b_j$ e $o_j$ 
+
+\begin{proof}[Para $t_i$:]
+    \begin{equation}
+            \label{eq:ap1}
+            \frac{\partial H}{\partial t_i} = -\sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \frac{1}{E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]} \cdot \frac{\partial E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]}{\partial t_i};
+    \end{equation}
+        
+    \noindent Tal que $E = E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]$, 
+    
+        \begin{equation}
+            \frac{\partial E}{\partial t_i} = \frac{0 - ( - \tau_j w_j)\cdot\big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j w_j - 1}\cdot \bigg[\frac{\partial \theta_i}{\partial t_i}\cdot (1 - \theta_i) - ( -1)\cdot \frac{\partial \theta_i}{\partial t_i}\cdot (\theta_i)\bigg]\cdot \big(\frac{1}{1 - \theta_i}\big)^{2}\cdot\big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}}{
+            \bigg[1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_j}{1 - \theta_j}\big)^{-\tau_j w_j}\bigg]^{2}
+            } = 
+        \end{equation}
+        \begin{equation}
+            = \frac{\tau_j w_j\cdot \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j w_j} \cdot \big(\frac{1 - \theta_i}{\theta_i}\big) \cdot \big(\frac{1}{1 - \theta_i}\big)^{2}\cdot \big[\frac{\partial \theta_i}{\partial t_i}\big]}{
+            \bigg[1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_j}{1 - \theta_j}\big)^{-\tau_j w_j}\bigg]^{2}
+            } = 
+        \end{equation}
+        
+        \begin{equation}
+        \label{eq:f1}
+            = \frac{\tau_j w_j\cdot \bigg[\big(\frac{\delta_j}{1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{1 - \theta_i}\big)^{-1}\bigg]^{\tau_j w_j}\cdot  \big[\frac{1}{\theta_i\cdot(1 - \theta_i)}\big]\cdot \big[\frac{\partial \theta_i}{\partial t_i}\big]}{
+            \bigg[1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_j}{1 - \theta_j}\big)^{-\tau_j w_j}\bigg]^{2}
+            } = 
+        \end{equation}
+    
+    \noindent Note que:
+    \begin{equation}
+        E^{2} = \bigg[\frac{1}{1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j w_j}}\bigg]^{2}
+    \end{equation}
+    
+   \noindent  Alem disso, trocando as Equações \ref{eq:summary_params} em (\ref{eq:f1}), então:
+    
+    \begin{equation}
+        \label{eq:e_ti}
+        \frac{\partial E}{\partial t_i}  = \tau_j w_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j w_j} \cdot \Theta(\theta_i) \cdot E^{2} \cdot \frac{\partial \theta_i}{\partial t_i}
+    \end{equation}
+    
+    \noindent Então, trocando \ref{eq:e_ti} em \ref{eq:ap1}, nos temos:
+    \begin{equation}
+        \frac{\partial H}{\partial t_i} = - \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \frac{1}{E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]} \cdot \tau_j w_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j w_j} \cdot \Theta(\theta_i) \cdot E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]^{2} \cdot \frac{\partial \theta_i}{\partial t_i} = 
+    \end{equation}
+    \begin{equation}
+         = -\sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \tau_j w_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j w_j} \cdot \Theta(\theta_i) \cdot E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]\cdot \frac{\partial \theta_i}{\partial t_i} 
+    \end{equation}
+    
+    \noindent Então, nos calculamos $\frac{\partial \theta_i}{\partial t_i}$ como:
+    
+    \begin{equation}
+        \frac{\partial \theta_i}{\partial t_i} = \frac{0 - (-1)\cdot e^{-t_i}}{(1 + e^{-t_i})^{2}} = \frac{e^{t_i}}{(1 + e^{-t_i})^{2}} = e^{-t_i}\cdot\sigma(t_i)^{2}
+    \end{equation}
+\end{proof}
+
+\begin{proof}[Para $d_j$:]
+
+    \begin{equation}
+        \label{eq:ap2}
+            \frac{\partial H}{\partial d_i} = - \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \frac{1}{E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]} \cdot \frac{\partial E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]}{\partial d_i};
+    \end{equation}
+
+    \noindent Nos podemos replicar os ultimos passos para $t_i$, então:
+
+    \begin{equation}
+    \tiny
+        \frac{\partial E}{\partial d_j} = \frac{0 - (\tau_j w_j)\cdot\big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j - 1}\cdot \bigg[\frac{\partial \delta_j}{\partial d_i}\cdot (1 - \delta_j) - ( -1)\cdot \frac{\partial \delta_j}{\partial d_i}\cdot (\delta_j)\bigg]\cdot \big(\frac{1}{1 - \delta_j}\big)^{2}\cdot\big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j w_j}}{
+        \bigg[1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_j}{1 - \theta_j}\big)^{-\tau_j w_j}\bigg]^{2}
+            } = 
+    \end{equation}
+    \begin{equation}
+        \label{eq:f2}
+        = -\frac{\tau_j w_j\cdot \bigg[\big(\frac{\delta_j}{1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{1 - \theta_i}\big)^{-1}\bigg]^{\tau_j w_j}\cdot  \big[\frac{1}{\delta_j\cdot(1 - \delta_j)}\big]\cdot \big[\frac{\partial \delta_j}{\partial d_i}\big]}{
+            \bigg[1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot \big(\frac{\theta_j}{1 - \theta_j}\big)^{-\tau_j w_j}\bigg]^{2}
+            } = 
+    \end{equation}
+
+    \noindent  Trocando a Equação \ref{eq:summary_params} em \ref{eq:f2}, nos temos:
+
+    \begin{equation}
+        \label{eq:e_dj}
+        \frac{\partial E}{\partial d_j}  = -\tau_j w_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j w_j} \cdot \Delta(\delta_j) \cdot E^{2} \cdot \frac{\partial \delta_j}{\partial d_j}
+    \end{equation}    
+
+    \noindent Então, trocando \ref{eq:e_dj} em (\ref{eq:ap2}), nos temos:
+
+    \begin{equation}
+        \frac{\partial H}{\partial d_j} = - \sum_{i=1}^{M}\sum_{j=1}^{N} - p_{ij}\cdot \tau_j w_j \cdot \Phi(\theta_i, \delta_j)^{\tau_j w_j} \cdot \Delta(\delta_j) \cdot E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]\cdot \frac{\partial \delta_j}{\partial d_j}
+    \end{equation}
+
+    \noindent Por fim, calculamos $\frac{\partial \delta_j}{\partial d_j}$ como:
+
+    \begin{equation}
+            \frac{\partial \delta_j}{\partial d_j} = \frac{0 - (-1)\cdot e^{-d_j}}{(1 + e^{-d_j})^{2}} = \frac{e^{d_j}}{(1 + e^{-d_j})^{2}} = e^{-d_j}\cdot\sigma(d_j)^{2}
+    \end{equation}
+
+\end{proof}
+
+\begin{proof}[Para $o_j$:]
+    \begin{equation}
+        \label{eq:ap3}
+            \frac{\partial H}{\partial o_j} = - \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \frac{1}{E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]} \cdot \frac{\partial E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]}{\partial o_j};
+    \end{equation}
+    
+    \noindent Note que:
+    \begin{equation}
+        E = E[\hat{p}_{ij} | t_i, d_j, o_j, b_j] = \frac{1}{1 + \bigg[\big(\frac{\delta_j}{1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{1 - \theta_i}\big)^{-1}\bigg]^{\tau_j w_j}}
+    \end{equation}
+    
+    \noindent Então,
+    \begin{equation}
+        \frac{\partial E}{\partial o_j} = \frac{0 - \text{ln}\big[\big(\frac{\delta_j}{ 1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{ 1 - \theta_i}\big)^{-1}\big] \cdot \big[\big(\frac{\delta_j}{ 1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{ 1 - \theta_i}\big)^{-1}\big]^{\tau_j w_j} \cdot \tau_j \cdot\frac{\partial w_j}{\partial o_j}}{\big[ 1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot\big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j w_j}\big]^{2}}
+    \end{equation}
+    
+    \noindent Simplificando, usando a Equação \ref{eq:fo} e \ref{eq:summary_params}, temos a expressão abaixo:
+    
+    \begin{equation}
+        \label{eq:e_oj}    
+        \frac{\partial E}{\partial o_j} = - E^{2}\cdot \tau_j \cdot \text{ln}[\Phi(\theta_i, \delta_j)] \cdot \big[\Phi(\theta_i, \delta_j)]^{\tau_j w_j} \cdot \frac{\partial w_j}{\partial o_j}
+    \end{equation}
+    
+    \noindent Então, trocando a Equação \ref{eq:e_oj} em \ref{eq:ap3}, temos:
+
+    \begin{equation}
+            \frac{\partial H}{\partial o_j} = - \sum_{i=1}^{M}\sum_{j=1}^{N} -p_{ij}\cdot E\cdot \tau_j \cdot \text{ln}[\Phi(\theta_i, \delta_j)] \cdot \big[\Phi(\theta_i, \delta_j)]^{\tau_j w_j} \cdot \frac{\partial w_j}{\partial o_j}
+    \end{equation}
+    
+    \noindent Por fim, podemos calcular  $\frac{\partial w_j}{\partial o_j}$ como:
+    
+    \begin{equation}
+        \frac{\partial w_j}{\partial o_j} = \frac{\partial (\text{ln}(1 + e^{o_j}) )}{\partial o_j} = \frac{e^{o_j}}{1 + e^{o_j}} = \frac{1}{1 + e^{-o_j}} = \sigma(o_j)
+    \end{equation}
+\end{proof}
+
+\begin{proof}[Para $b_j$:]
+    \begin{equation}
+        \label{eq:ap4}
+            \frac{\partial H}{\partial b_j} = - \sum_{i=1}^{M}\sum_{j=1}^{N} p_{ij}\cdot \frac{1}{E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]} \cdot \frac{\partial E[\hat{p}_{ij} | t_i, d_j, o_j, b_j]}{\partial b_j};
+    \end{equation}
+    
+    \noindent Similarmente, como feito para $o_j$, obtemos a expressão abaixo:
+    
+    \begin{equation}
+        \frac{\partial E}{\partial b_j} = \frac{0 - \text{ln}\big[\big(\frac{\delta_j}{ 1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{ 1 - \theta_i}\big)^{-1}\big] \cdot \big[\big(\frac{\delta_j}{ 1 - \delta_j}\big)\cdot \big(\frac{\theta_i}{ 1 - \theta_i}\big)^{-1}\big]^{\tau_j w_j} \cdot w_j \cdot\frac{\partial \tau_j}{\partial b_j}}{\big[ 1 + \big(\frac{\delta_j}{1 - \delta_j}\big)^{\tau_j w_j}\cdot\big(\frac{\theta_i}{1 - \theta_i}\big)^{-\tau_j w_j}\big]^{2}}
+    \end{equation}
+    
+    \noindent Simplificando também usando as Equações \ref{eq:fo} e \ref{eq:summary_params}, temos:
+    
+    \begin{equation}
+        \label{eq:e_bj}    
+        \frac{\partial E}{\partial b_j} = - E^{2}\cdot w_j \cdot \text{ln}[\Phi(\theta_i, \delta_j)] \cdot \big[\Phi(\theta_i, \delta_j)]^{\tau_j w_j} \cdot \frac{\partial \tau_j}{\partial b_j}
+    \end{equation}
+    
+    \noindent Então, trocando a Equação \ref{eq:e_bj} em (\ref{eq:ap4}, temos:
+
+    \begin{equation}
+            \frac{\partial H}{\partial b_j} = - \sum_{i=1}^{M}\sum_{j=1}^{N} -p_{ij}\cdot E\cdot w_j \cdot \text{ln}[\Phi(\theta_i, \delta_j)] \cdot \big[\Phi(\theta_i, \delta_j)]^{\tau_j w_j} \cdot \frac{\partial \tau_j}{\partial b_j}
+    \end{equation}
+    
+    \noindent Por fim, calculamos $\frac{\partial \tau_j}{\partial b_j}$ da seguinte forma:
+    
+    \begin{equation}
+        \frac{\partial \tau_j}{\partial b_j} = \frac{\partial (\text{tanh}(b_j))}{\partial b_j} = \frac{(e^{b_j} + e^{-b_j})^{2} - (e^{b_j} - e^{-b_j})^{2}}{(e^{b_j} + e^{-b_j})^{2}} =
+    \end{equation}
+    \begin{equation}
+        = 1 - \bigg(\frac{e^{b_j} - e^{-b_j}}{e^{b_j} + e^{-b_j}}\bigg)^{2} = 1 - 
+        [\text{tanh}(b_j)]^{2} = 1 - \tau_j^{2}
+    \end{equation}
+\end{proof}
+
+% \begin{leftbar}
+% Appendices can be included after the bibliography (with a page break). Each
+% section within the appendix should have a proper section title (rather than
+% just \emph{Appendix}).
+
+% For more technical style details, please check out JSS's style FAQ at
+% \url{https://www.jstatsoft.org/pages/view/style#frequently-asked-questions}
+% which includes the following topics:
+% \begin{itemize}
+%   \item Title vs.\ sentence case.
+%   \item Graphics formatting.
+%   \item Naming conventions.
+%   \item Turning JSS manuscripts into \proglang{R} package vignettes.
+%   \item Trouble shooting.
+%   \item Many other potentially helpful details\dots
+% \end{itemize}
+% \end{leftbar}
+
+
+
+% \section[Using BibTeX]{Using \textsc{Bib}{\TeX}} \label{app:bibtex}
+
+% \begin{leftbar}
+% References need to be provided in a \textsc{Bib}{\TeX} file (\code{.bib}). All
+% references should be made with \verb|\cite|, \verb|\citet|, \verb|\citep|,
+% \verb|\citealp| etc.\ (and never hard-coded). This commands yield different
+% formats of author-year citations and allow to include additional details (e.g.,
+% pages, chapters, \dots) in brackets. In case you are not familiar with these
+% commands see the JSS style FAQ for details.
+
+% Cleaning up \textsc{Bib}{\TeX} files is a somewhat tedious task -- especially
+% when acquiring the entries automatically from mixed online sources. However,
+% it is important that informations are complete and presented in a consistent
+% style to avoid confusions. JSS requires the following format.
+% \begin{itemize}
+%   \item JSS-specific markup (\verb|\proglang|, \verb|\pkg|, \verb|\code|) should
+%     be used in the references.
+%   \item Titles should be in title case.
+%   \item Journal titles should not be abbreviated and in title case.
+%   \item DOIs should be included where available.
+%   \item Software should be properly cited as well. For \proglang{R} packages
+%     \code{citation("pkgname")} typically provides a good starting point.
+% \end{itemize}
+% \end{leftbar}
+
+
+
+
+
+%% else use the following coding to input the bibitems directly in the
+%% TeX file.
+
+%% Refer following link for more details about bibliography and citations.
+%% https://en.wikibooks.org/wiki/LaTeX/Bibliography_Management
+
+% \begin{thebibliography}{00}
+
+% %% For authoryear reference style
+% %% \bibitem[Author(year)]{label}
+% %% Text of bibliographic item
+
+% \bibitem[Lamport(1994)]{lamport94}
+%   Leslie Lamport,
+%   \textit{\LaTeX: a document preparation system},
+%   Addison Wesley, Massachusetts,
+%   2nd edition,
+%   1994.
+

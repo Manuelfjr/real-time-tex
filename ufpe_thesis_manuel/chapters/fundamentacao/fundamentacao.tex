@@ -1,0 +1,161 @@
+\chapter{Teoria de Resposta ao Item}
+\label{chap:n3_irt}
+
+\section{Teoria de Resposta ao Item}
+\label{sec:irt:classic}
+
+ A \gls{TRI} é frequentemnte adotada no campo de psicometria, para estimar habilidades latentes de respondentes humanos em testes. Ao contrário do teste classico, o qual a performance depende do nivel do teste, \gls{IRT} foca nos itens e tem como objetivo modelar respostas dada pelos respodentes, considerando diferentes niveis de habilidades para itens de diferentes dificuldades, ambos sendo mensurados em uma escala conhecida \cite{embretson2013item}. O conceito de item depende da aplicação e pode representar, por exemplo, um exame, respostas abertas ou questões de multiplas escolhas. Na prática, modelos de \gls{IRT} estimam habildiades latentes e dificuldades baseado em respostas observadas, dado um teste, e tem sido frequente aplicado para mensurar performace de estudantes em provas.
+
+ Nos ultimos anos, \gls{IRT} tem sido aplicada para avaliação de \gls{IA} em diferentes tipos de dominios, como aprendizado supervisionado, como classificação e regressão \cite{chen2019birt, martinez2016making, moraes2020item, moraes2022evaluating},  reconhecimento de fala \cite{oliveira2022two-level}, benchmarking para grandes modelos de linguagem \cite{castleman2025rethinking}, entre outros. Em tais aplicações, cada sistem de \gls{IA} é modelado como um respondente, enquanto cada tarefa de \gls{IA} é modelada como um item. Respostas (seja correta ou incorreta) são coletadas de um grupo de respondentes para produzir uma \gls{CCI}s para os parâmetros como dificuldade e discriminante. Altas habilidades serão dadas para respondentes que tiverem boas respostas para itens de alta dificuldade, enquanto será consistente para itens faceis. Então, o objetivo da \gls{TRI} pode ser considerado duplo:
+
+ \begin{itemize}
+     \item (1) mensurar a habilidade de cada respondente;
+     \item (2) caracterizar a dificuldade e discriminate para cada item.
+ \end{itemize}
+
+
+ A \gls{TRI} constitui um arcabouço probabilístico amplamente utilizado na psicometria para modelar a interação entre respondentes e itens de teste. Diferentemente de abordagens baseadas apenas em escores observados ou estatísticas agregadas, a \gls{TRI} assume que o desempenho observado é resultado da interação entre características latentes dos respondentes e propriedades intrínsecas dos itens. Nesse contexto, habilidades e dificuldades não são diretamente observáveis, mas podem ser estimadas conjuntamente a partir de um modelo probabilístico que descreve a probabilidade de resposta em função dessas variáveis latentes.
+
+O princípio central da \gls{TRI} é que a probabilidade de um respondente acertar um item depende de sua habilidade e da dificuldade do item, podendo também envolver parâmetros adicionais, como a discriminação, que mede o quanto o item é sensível a diferenças de habilidade. Essa modelagem permite interpretar o desempenho de forma mais estruturada: respondentes com maior habilidade tendem a apresentar maior probabilidade de acerto em itens mais difíceis, enquanto itens com alta discriminação são mais eficazes em distinguir respondentes com níveis próximos de habilidade.
+
+Sobre a arquitetura tradicional de modelos \gls{TRI}, para cada item $j$, um respondente $i$ produz uma resposta que é uma função da habilidade do responden e da dificuldade do item, algumas vezes incluindo outros parâmetros para o item, como um discriminante e um parâmetro de chute. Muitos trabalhos em \gls{TRI} assumem que a resposta $x_{ij}$ é binária, a qual é normalmente codificada como $x_{ij} = 1$ se o $j$-ésimo item foi corretamente respondido pelo $i$-ésimo respondente, caso contrário temos $x_{ij} = 0$ \cite{bachrach2012grade,embretson2013item,martinez2016making,twomey2022equitable}.
+
+Estes modelos normalmente assumem que a resposta $x_{ij}$ segue uma distribuição Bernoulli, com parâmetro $p_{ij}$ de sucesso, sendo definido como uma função logistica, dependente da habilidade latente $\theta_i$ e dois parâmetros associados a cada item, sendo eles a dificuldade $\delta_j$ e discriminante $a_j$, como dado pela equação \ref{eq:genIRT}
+
+\begin{equation} 
+\label{eq:genIRT}
+    %\begin{split}
+    x_{ij} = \Bernoulli(p_{ij}),\; 
+    p_{ij} = \sigma(-{a_j} d_{ij}),\;
+    d_{ij} = {\theta_i-\delta_j},\\ 
+    %&p_{ij} \sim \mathcal{L}(d_{ij}, a_j)
+    %\end{split}
+\end{equation}
+
+\noindent aonde $\sigma(\cdot)$ é função logistica, tendo como parâmetro de locação $\delta_j$ e o parâmetro de forma $a_j$, $j=1,\ldots,N$ e $i=1,\ldots,M$. Esse modelo, conhecido como \gls{2PL-IRT}, resulta em uma \gls{CCI} que mapea a habilidade para a resposta esperada, como mostrado pela equação \ref{eq:2plIRT}.
+
+\begin{equation}
+\label{eq:2plIRT}
+    E[x_{ij}|\theta_i,\delta_j,a_j] = p_{ij} = \frac{1}{1+e^{-a_j(\theta_i-\delta_j)}}.
+\end{equation}
+
+Quando temos $\theta_i = \delta_j$, a resposta esperada é $0.5$. Além disso, sendo $a_j=1, \forall j=1,\ldots,N$, temos um modelo mais simples, conhecido como \gls{1PL-IRT}, o qual descreve o item apenas pelas suas dificuldades, sendo um discriminante constante e igual a $1$. Em geral, o discriminante $a_j$ indica como a probabilidade da resposta correta muda a medida que a habilidade do respondente $i$ aumenta. Altas discriminações induzem \gls{CCI}s fortes no ponto em que a habilidade se iguala à dificuldade, com pequenas mudanças na habilidade causando grandes mudanças na probabilidade de resposta correta.
+
+\section{$\beta^{3}$-\gls{IRT}}
+\label{sec:irt:beta3}
+
+Apesar do seu amplo uso na área de psicometria, modelos de \gls{TRI} binária tem um uso limitado quando respostas são produzidas em uma escala continua. Em particular, modelos binários não são adequados se a resposta avaliada são estimativas de probabilidade ou proporções, como no caso quando respondentes são estimativas de probabilidades ou proporções, como no caso quando respondentes são classificadores e a resposta é probabilidade predita de pertencimento da classe verdadeira de um item \ref{eq:model_def}. Considerando esses casos, um modelo novo foi desenvolvido, entitulado como $\beta^3$-\gls{IRT} \cite{chen2019birt}, definido pela equação \ref{eq:model_def}, sendo $p_{ij}$ a resposta observada pelo respondente i para o item j, assumindo seguir uma distribução Beta, com parâmetros $\alpha_{ij}$ e $\beta_{ij}$, definidos como funções da habilidade $\theta_i$ do respondente e dificuldade ($\delta_j$) e discriminante ($a_j$).
+
+\begin{align} \label{eq:model_def}
+    p_{ij} & \sim \Beta(\alpha_{ij}, \beta_{ij}), \notag \\
+    \alpha_{ij} & = 
+    \left(\frac{\theta_i}{\delta_j}\right)^{a_j}, \notag 
+    \beta_{ij} = 
+    \left(\frac{1-\theta_i}{1-\delta_j}\right)^{a_j}, \notag \\
+    \theta_i & \sim \Beta(1,1),\;
+    \delta_j \sim \Beta(1,1),\;
+    a_j \sim \mathcal{N}(1, \sigma^2_{0}).
+\end{align}
+
+\noindent Tome $\sigma_0^{2}$ sendo um hiperparâmetro do modelo, o qual o autor fixa como 1 em seus experimentos. A \gls{CCI}, nesse modelo, será definida pelo valor esperado de uma distribuição Beta, com os parâmetros $\alpha_{ij}$ e $\beta_{ij}$ ($\Beta(\alpha_{ij}, \beta_{ij})$), tendo a forma dada pela equação \ref{eq:ep_birt}.
+
+% Here, $\sigma^2_{0}$ is a hyperparameter of the model, which the authors set as $1$ in their experiments. In this model, the ICC is defined by the expected value of $\Beta(\alpha_{ij}, \beta_{ij})$, taking the form given by Equation (\ref{eq:ep_birt}):
+
+\begin{equation}\label{eq:ep_birt}
+    \begin{split}
+        \EE[p_{ij}|\theta_i,\delta_j,a_j] &= \frac{\alpha_{ij}}{\alpha_{ij}+\beta_{ij}} 
+        %= \frac{1}{1+\left(\frac{\delta_j}{1-\delta_j}\right)^{a_j}\bigg/\left(\frac{\theta_i}{1-\theta_i}\right)^{a_j}}
+        = \frac{1}{1+\left(\frac{\delta_j}{1-\delta_j}\right)^{a_j} \left(\frac{\theta_i}{1-\theta_i}\right)^{-a_j}}.
+    \end{split}
+\end{equation}
+
+Essa parametrização permite ao $\beta^3$-\gls{IRT} obter curvas \gls{CCI}s não logisticas, sendo $\delta_j$ como parâmetro de localização, similarmente a modelos logísticos de \gls{TRI}. Dado essa formula, temos que a resposta é $0.5$ quando $\theta_i = \delta_j$ e a curva tem uma inclinação $\frac{a_j}{4\cdot \delta_j \cdot (1 - \delta_j)}$ neste ponto. A Figura \ref{fig:betaICCs} exemplifica as \gls{CCI}s para o $\beta^3$-\gls{IRT} dado diferentes parâmetros de forma, dependendo de $a_j$. Para $a_j > 1$, é possível ver um comportamento sigmoidal, se aproximando de modelos logisticos de \gls{TRI}; já para $a_j = 1$, é possivel notar uma curva parabolica com um vertice em 0.5; já para $0 < a_j < 1$, temos um comportamento anti-sigmoidal. Além disso, o modelo também permite discriminações negativas, sendo as \gls{CCI}s para $-1 < a_j < 0$  e $a_j < -1$ dados por uma anti-sigmoide e uma sigmoide decrescente, respectivamente.
+
+\begin{figure*}[!ht]
+\centering
+\begin{subfigure}{0.41\linewidth}
+%\includegraphics[width=\linewidth,trim={1cm 0.cm 0.cm 0.cm}]{/assets/iccs/beta_ICC_discr_a2.png}
+\includegraphics[width=\linewidth,trim={1cm 0.cm 0.cm 0.cm}]{chapters/fundamentacao/imagens/beta3_aj2.png}
+\caption{$\a_j = 2$.}
+\label{fig:ICC_discr2}
+\end{subfigure}
+\quad
+\begin{subfigure}{0.41\linewidth}
+\includegraphics[width=\linewidth,trim={1cm 0.cm 0.cm 0.cm}]{chapters/fundamentacao/imagens/beta3_aj1.png}
+\caption{$\a_j = 1$.}
+\label{fig:ICC_discr1}
+\end{subfigure}
+\\
+\begin{subfigure}{0.41\linewidth}
+\includegraphics[width=\linewidth,trim={1cm 0.cm 0.cm 0.cm}]{chapters/fundamentacao/imagens/beta3_aj0.5.png}
+\caption{$\a_j = 0.5$.}
+\label{fig:ICC_discr05}
+\end{subfigure}
+\begin{subfigure}{0.41\linewidth}
+\includegraphics[width=\linewidth,trim={1cm 0.cm 0.cm 0.cm}]{chapters/fundamentacao/imagens/beta3_aj-0.5.png}
+\caption{$\a_j = -0.5$.}
+\label{fig:ICC_discr05neg}
+\end{subfigure}
+\begin{subfigure}{0.41\linewidth}
+\includegraphics[width=\linewidth,trim={1cm 0.cm 0.cm 0.cm}]{chapters/fundamentacao/imagens/beta3_aj-1.png}
+\caption{$\a_j = -1$.}
+\label{fig:ICC_discr1neg}
+\end{subfigure}
+%\\
+%
+\caption{Exemplo de $\beta^{3}$-\gls{IRT} \gls{CCI}s para diferentes valores de dificuldade e discriminação. \gls{CCI}s mais íngremes resultam de valores de discriminação mais altos, enquanto a dificuldade determina a habilidade necessária para superar uma resposta de $0.5$. Quando $a_j < 0$, a relação da \gls{CCI} se inverte.} %Fonte: \cite{chen2019birt}. }
+\label{fig:betaICCs}
+\end{figure*}
+
+Perceba que a estimação correta do parâmetro de discriminante, em especial o sinal, é de suma importância, uma vez que ele define a relação do item com a resposta. Um comportamento sigmoidal de \gls{CCI} significa que o item é bom em discriminar respondentes, diante do range de habilidades, enquanto uma curva anti-sigmoidal apenas faz um bom trabalho em detectar diferentes habilidades em baixos e altos ranges. Além disso, discriminações negativas devem ser interpretadas como instâncias ruidosas ou instâncias mais complexas, que podem estar em uma região de fronteira ou dificeis de serem alocadas na partição correta, para respondentes que possuem uma alta habilidade.
+
+
+O modelo $\beta^3$-\gls{IRT} pode ser considerado um modelo altamente não-identificavel, devido a sua simétria\cite{nishihara2013detecting}. Por exemplo, tomando $p_{ij} \rightarrow 1$, podemos afirmar que $\alpha_{ij} > 1$ e $\beta_{ij} < 1$, dessa forma podemos afirmar que $\theta_i > \delta_j$ para $a_j > 0$, porém também é possível afirmar que $\theta_i < \delta_j$ para $a_j < 0$.
+
+Essa simetria presente no modelo $\beta^3$-\gls{IRT} evidencia uma limitação importante quando o objetivo é interpretar os parâmetros latentes de forma concisa, onde discriminações negativas podem assumir papel relevante na identificação de instâncias possivelmente ruidosas. Dessa forma, embora o $\beta^3$-\gls{IRT} possa permitir respostas contínuas e curvas características não logísticas, sua estrutura interna ainda impõe restrições que podem afetar a recuperação adequada dos parâmetros latentes. Essa limitação motiva o desenvolvimento de uma extensão do modelo capaz de reduzir essa simetria, separando explicitamente componentes associados ao sinal e a magnitude da discriminação. Na seção seguinte, é apresentado o modelo $\beta^4$-\gls{IRT}, proposto com o objetivo de mitigar esses problemas e fornecer uma estrutura mais estável.
+
+\input{chapters/fundamentacao/beta4}
+
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto, confome Tabela \ref{tbl:tabelaex} e a Tabela \ref{tbl:tabelaex2}.
+
+% %exemplo de inputs, ideal para organização e troca de posicionamento futuro é ter um elemento por arquivo
+% \input{chapters/fundamentacao/tabelas/tabelaex}
+
+% \input{chapters/fundamentacao/tabelas/tabelaex2}
+
+% \section{Texto Texto}
+% \label{sec:section}
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto \cite{gil2002elaborar}.
+
+
+% \section{Texto Texto}
+% \label{sec:outrasection}
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto
+
+% \subsection{Texto Texto Texto}
+% \label{sub:outrasubsectiona}
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto
+
+
+% \subsubsection{Texto Texto Texto Texto}
+% \label{subsub:outrasubsubsection}
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto
+
+% \subsubsection{Texto Texto Texto Texto}
+% \label{subsub:outrasubsubsection2a}
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto
+
+% %a organização fica a seu critério se preferir utilize inputs para cada seção, subseção etc...
+% \input{chapters/fundamentacao/secoes/subsecoes/subsecaoA}
+% \input{chapters/fundamentacao/secoes/subsecoes/subsecaoB}
+
+% \section{Texto Texto}
+% \label{sec:section3}
+
+% Texto texto texto texto ''texto'' texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto texto

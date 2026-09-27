@@ -661,7 +661,20 @@ function iconFor(name) {
   return '📎';
 }
 
-function snippetFor(relPath) {
+// Sidebar paths are relative to the project root, but LaTeX resolves
+// \input/\includegraphics against the main file's own folder (the compile
+// runs there) — which differs whenever the main file sits in a subfolder, as
+// in most imported projects. Rewrites a root-relative path to that base.
+function pathFromMainFile(relPath) {
+  const base = (mainFileRel || '').split('/').slice(0, -1);
+  const target = relPath.split('/');
+  let shared = 0;
+  while (shared < base.length && shared < target.length - 1 && base[shared] === target[shared]) shared++;
+  return [...Array(base.length - shared).fill('..'), ...target.slice(shared)].join('/');
+}
+
+function snippetFor(rootRelPath) {
+  const relPath = pathFromMainFile(rootRelPath);
   const ext = extOf(relPath);
   if (IMAGE_EXT.includes(ext) || ext === 'pdf' || ext === 'eps') {
     return `\\includegraphics[width=0.8\\linewidth]{${relPath}}`;
@@ -951,8 +964,11 @@ fileSidebar.addEventListener('drop', (e) => {
 // ------------------------------------------------------------------
 // AI writing assistant: a chat sidebar backed by POST /chat, which proxies
 // to the Anthropic API server-side (the key never reaches the browser).
-// Each message includes the relative path of whatever file is currently
-// open (`currentFile`), so the server can attach its content as context.
+// The assistant can read and search the whole project and change files
+// through tools; each step streams back as a `tool` event and is shown
+// inline, with "Desfazer" on every change it made. Each message also
+// sends the relative path of whatever file is currently open
+// (`currentFile`), so the server can attach its content as context.
 // ------------------------------------------------------------------
 
 const chatToggleBtn = document.getElementById('chat-toggle-btn');
@@ -999,6 +1015,98 @@ function renderChatText(el, text) {
   });
 }
 
+function toolLabel(tool) {
+  const p = tool.path || '';
+  switch (tool.name) {
+    case 'list_files':
+      return '📂 Viu os arquivos do projeto';
+    case 'read_file':
+      return `📖 Leu ${p}`;
+    case 'search_project':
+      return `🔎 Buscou “${tool.detail || ''}”`;
+    case 'edit_file':
+      return `✏️ Alterou ${p}`;
+    case 'create_file':
+      return `📄 Criou ${p}`;
+    default:
+      return tool.name;
+  }
+}
+
+function toolErrorLabel(tool) {
+  const p = tool.path || '';
+  const what = {
+    read_file: `Não conseguiu ler ${p}`,
+    search_project: 'A busca falhou',
+    edit_file: `Não conseguiu alterar ${p}`,
+    create_file: `Não conseguiu criar ${p}`,
+  }[tool.name];
+  return what ? `⚠️ ${what}: ${tool.detail || 'erro'}` : `⚠️ ${tool.detail || 'erro'}`;
+}
+
+// "Working" indicator kept as the last child of the assistant's reply for
+// as long as the request runs — the model can go quiet for a while between
+// steps (reading files, writing a long edit), and without it the chat looks
+// frozen. Its text follows what the assistant is doing right now.
+function createWorkingIndicator() {
+  const el = document.createElement('div');
+  el.className = 'chat-working';
+  const dots = document.createElement('span');
+  dots.className = 'chat-working-dots';
+  dots.innerHTML = '<i></i><i></i><i></i>';
+  const label = document.createElement('span');
+  label.className = 'chat-working-label';
+  label.textContent = 'Pensando…';
+  el.append(dots, label);
+  return { el, setLabel: (text) => (label.textContent = text) };
+}
+
+async function undoAiEdit(editId, row, undoBtn) {
+  undoBtn.disabled = true;
+  try {
+    const res = await fetch(api('/chat/undo'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ editId }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'erro desconhecido');
+    row.classList.add('undone');
+    undoBtn.textContent = 'Desfeito';
+    fetchFiles();
+  } catch (err) {
+    undoBtn.disabled = false;
+    alert('Não foi possível desfazer: ' + err.message);
+  }
+}
+
+function buildToolRow(tool) {
+  const row = document.createElement('div');
+  row.className = 'chat-tool' + (tool.status === 'error' ? ' error' : '') + (tool.editId ? ' change' : '');
+  const label = document.createElement('span');
+  label.className = 'chat-tool-label';
+  label.textContent = tool.status === 'error' ? toolErrorLabel(tool) : toolLabel(tool);
+  row.appendChild(label);
+
+  if (tool.editId) {
+    if (tool.path && EDITABLE_EXT.includes(extOf(tool.path))) {
+      const openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'chat-tool-btn';
+      openBtn.textContent = 'Abrir';
+      openBtn.addEventListener('click', () => connectToFile(tool.path));
+      row.appendChild(openBtn);
+    }
+    const undoBtn = document.createElement('button');
+    undoBtn.type = 'button';
+    undoBtn.className = 'chat-tool-btn';
+    undoBtn.textContent = 'Desfazer';
+    undoBtn.addEventListener('click', () => undoAiEdit(tool.editId, row, undoBtn));
+    row.appendChild(undoBtn);
+  }
+  return row;
+}
+
 async function sendChatMessage() {
   const text = chatInput.value.trim();
   if (!text || chatStreaming) return;
@@ -1006,11 +1114,21 @@ async function sendChatMessage() {
   appendChatMessage('user', text);
   chatHistory.push({ role: 'user', content: text });
 
-  const assistantEl = appendChatMessage('assistant pending', '');
+  // One assistant message can interleave text with tool steps, so it's
+  // rendered as a sequence of segments: a text bubble per stretch of
+  // text and a row per tool call.
+  const assistantEl = appendChatMessage('assistant', '');
+  const working = createWorkingIndicator();
+  assistantEl.appendChild(working.el);
+  // New segments go right before the indicator so it stays at the bottom.
+  const appendSegment = (el) => assistantEl.insertBefore(el, working.el);
+  let textEl = null;
+  let segmentText = '';
   chatStreaming = true;
   chatSendBtn.disabled = true;
 
   let assistantText = '';
+  const changes = [];
   try {
     const res = await fetch(api('/chat'), {
       method: 'POST',
@@ -1037,20 +1155,41 @@ async function sendChatMessage() {
         const payload = line.slice(5).trim();
         if (payload === '[DONE]' || !payload) continue;
         const parsed = JSON.parse(payload);
-        if (parsed.error) throw new Error(parsed.error);
-        if (parsed.text) {
+        if (parsed.error) {
+          appendSegment(buildToolRow({ name: 'erro', status: 'error', detail: parsed.error }));
+          textEl = null;
+        } else if (parsed.tool) {
+          appendSegment(buildToolRow(parsed.tool));
+          if (parsed.tool.editId) changes.push(toolLabel(parsed.tool).replace(/^\S+\s/, ''));
+          textEl = null;
+          working.setLabel(parsed.tool.editId ? 'Continuando…' : 'Analisando o projeto…');
+        } else if (parsed.text) {
+          working.setLabel('Escrevendo…');
+          if (!textEl) {
+            textEl = document.createElement('div');
+            textEl.className = 'chat-text';
+            appendSegment(textEl);
+            segmentText = '';
+            if (assistantText) assistantText += '\n\n';
+          }
+          segmentText += parsed.text;
           assistantText += parsed.text;
-          assistantEl.classList.remove('pending');
-          renderChatText(assistantEl, assistantText);
-          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+          renderChatText(textEl, segmentText);
         }
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
       }
     }
-    chatHistory.push({ role: 'assistant', content: assistantText });
+    // The server only receives text history, so note what was changed —
+    // otherwise the next turn wouldn't know its earlier edits happened.
+    const record = changes.length ? `${assistantText}\n\n[Alterações feitas: ${changes.join('; ')}]` : assistantText;
+    chatHistory.push({ role: 'assistant', content: record.trim() || '(sem resposta)' });
+    if (changes.length) fetchFiles();
   } catch (err) {
-    assistantEl.remove();
-    appendChatMessage('error', assistantText ? `${assistantText}\n\n[interrompido: ${err.message}]` : `Erro: ${err.message}`);
+    working.el.remove();
+    if (!assistantEl.childNodes.length) assistantEl.remove();
+    appendChatMessage('error', assistantText ? `[interrompido: ${err.message}]` : `Erro: ${err.message}`);
   } finally {
+    working.el.remove();
     chatStreaming = false;
     chatSendBtn.disabled = false;
   }

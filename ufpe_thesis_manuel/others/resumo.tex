@@ -1,0 +1,29 @@
+
+% resumo em português
+\begin{resumo}[Resumo] 
+A avaliação de modelos não supervisionados é um problema central em Aprendizado de Máquina, especialmente na ausência de rótulos reais associados às instâncias. Diferentemente do cenário supervisionado, em que métricas externas permitem mensurar diretamente o desempenho dos modelos, métodos não supervisionados dependem, em geral, de medidas internas baseadas em coesão e separação dos agrupamentos, as quais são fortemente influenciadas pela métrica de distância adotada e nem sempre refletem a capacidade do modelo de recuperar estruturas latentes ocultas. Nesse contexto, torna-se necessário o desenvolvimento de abordagens mais gerais e robustas para avaliação de modelos de agrupamento. Esta dissertação propõe uma abordagem unificada baseada em Teoria de Resposta ao Item (TRI) para estimar habilidade latente de modelos e dificuldade de instâncias, explorando a concordância entre métodos quanto ao agrupamento de pares de instâncias como fonte de informação avaliativa. Inicialmente, é apresentado o modelo $\beta^4$-IRT, uma extensão do $\beta^3$-IRT, no qual o parâmetro de discriminação é decomposto em duas componentes associadas ao sinal e à magnitude. Essa reformulação mitiga problemas de não-identificabilidade presentes no modelo original e melhora significativamente a recuperação dos parâmetros, particularmente em cenários com instâncias ruidosas ou com discriminação negativa, comuns em aplicações de Aprendizado de Máquina. Em seguida, é proposto o método CLAIRE, que formula a avaliação de agrupamentos como um problema de estimação de habilidade via TRI, utilizando uma matriz de respostas construída a partir da concordância entre modelos quanto ao agrupamento de pares de instâncias. Ao assumir que modelos mais informativos tendem a concordar entre si sobre decisões estruturais relevantes, o método permite estimar habilidades relativas sem acesso a rótulos verdadeiros. Os resultados experimentais demonstram que a abordagem produz ranqueamentos altamente correlacionados com medidas externas tradicionais. Além disso, experimentos adicionais evidenciam que, mesmo com a inserção de partições aleatórias no conjunto de modelos avaliados, o CLAIRE mantém um ranqueamento consistente e robusto, preservando a ordenação correta dos modelos informativos no pool considerado. Assim, a dissertação estabelece a modelagem de habilidade latente como um princípio teórico e metodológico geral para a avaliação de métodos não supervisionados. 
+% \noindent %- o resumo deve ter apenas 1 parágrafo e sem recuo de texto na primeira linha, essa tag remove o recuo. Não pode haver quebra de linha.
+
+ \vspace{\onelineskip}
+    
+ \noindent
+ \textbf{Palavras-chaves}: Agrupamento, Avaliação, Teoria de Resposta ao Item, Concordância entre modelos, Aprendizado de Máquina.
+\end{resumo}
+
+
+
+% resumo em inglês
+\begin{resumo}[Abstract]
+\begin{otherlanguage*}{english}
+
+ %\noindent
+
+The evaluation of unsupervised models is a central problem in Machine Learning, particularly in the absence of ground-truth labels associated with instances. Unlike the supervised setting, where external metrics allow direct measurement of model performance, unsupervised methods generally rely on internal measures based on cluster cohesion and separation, which are strongly influenced by the adopted distance metric and do not necessarily reflect the model’s ability to recover hidden latent structures. In this context, the development of more general and robust approaches for clustering evaluation becomes necessary. This dissertation proposes a unified approach based on Item Response Theory (IRT) to estimate latent model ability and instance difficulty, exploring agreement between methods regarding the grouping of instance pairs as a source of evaluative information. Initially, the $\beta^4$-IRT ign and magnitude. This reformulation mitigates non-identifiability issues present in the original model and significantly improves parameter recovery, particularly in scenarios involving noisy instances or negative discrimination, which are common in Machine Learning applications. Subsequently, the CLAIRE method is proposed, formulating clustering evaluation as an ability estimation problem via IRT, using a response matrix constructed from agreement between models regarding the grouping of instance pairs. By assuming that more informative models tend to agree with each other on structurally relevant decisions, the method enables the estimation of relative abilities without access to ground-truth labels. Experimental results demonstrate that the approach produces rankings highly correlated with traditional external measures. Furthermore, additional experiments show that even with the insertion of random partitions into the pool of evaluated models, CLAIRE maintains a consistent and robust ranking, preserving the correct ordering of informative models within the considered pool. Thus, this dissertation establishes latent ability modeling as a general theoretical and methodological principle for the evaluation of unsupervised methods.
+
+
+   \vspace{\onelineskip} 
+ 
+   \noindent 
+   \textbf{Keywords}: Clustering, Evaluation, Item Response Theory, Model Agreement, Machine Learning.
+ \end{otherlanguage*}
+ \end{resumo}

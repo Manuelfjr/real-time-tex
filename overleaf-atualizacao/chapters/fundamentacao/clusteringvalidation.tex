@@ -1,0 +1,128 @@
+\chapter{Avaliação de Agrupamentos}
+\label{chap:n2_agrupamentos}
+
+% \subsection{INTRODUÇÃO}
+A validação de agrupamentos constitui um dos principais desafios do aprendizado não supervisionado. Diferentemente de tarefas supervisionadas, nas quais há rótulos previamente definidos que permitem avaliar diretamente o desempenho do modelo, no contexto de agrupamento não há, em geral, uma referência explícita que indique a partição correta dos dados. Isso torna a avaliação da qualidade das soluções de clustering uma tarefa inerentemente mais complexa.
+
+Ao longo das últimas décadas, diversas medidas de validação foram propostas na literatura \cite{wu2020decision,WOS:000172252500002,WOS:000232704100004,deborah2010survey}, cada uma enfatizando diferentes propriedades estruturais das partições obtidas. De maneira geral, essas medidas podem ser classificadas em duas grandes categorias: índices internos e índices externos.
+
+Os índices internos avaliam a qualidade de uma solução de agrupamento considerando apenas propriedades intrínsecas dos dados e da própria partição obtida, sem recorrer a informações externas. Já os índices externos pressupõem a existência de uma partição de referência \emph{a priori} e mensuram o grau de concordância entre essa partição conhecida e a solução produzida pelo algoritmo.
+
+Enquanto medidas internas avaliam características geométricas e estruturais dos dados, medidas externas avaliam concordância semântica com um critério externo. Em aplicações exploratórias, nas quais rótulos verdadeiros não estão disponíveis, índices internos são indispensáveis. Por outro lado, em estudos comparativos e experimentos simulados, índices externos oferecem uma avaliação mais interpretável e objetiva do desempenho dos algoritmos.
+
+\subsection{ÍNDICES DE VALIDAÇÃO INTERNOS}
+
+Os índices de validação interna buscam quantificar propriedades desejáveis em uma solução de agrupamento. Podemos listar três princípios fundamentais que são considerados:
+
+\begin{itemize}
+    \item \textbf{Compacidade}: avalia o quão próximas estão as instâncias pertencentes ao mesmo grupo;
+
+    \item \textbf{Separabilidade}: mede o grau de distinção entre grupos diferentes;
+
+    \item \textbf{Conectividade}: verifica as instâncias vizinhas no espaço de atributos são alocadas ao mesmo grupo.
+\end{itemize}
+
+
+Uma solução considerada adequada deve apresentar \textbf{alta compacidade} e \textbf{alta separabilidade}, preservando, ao mesmo tempo, a \textbf{estrutura local dos dados}.
+
+\subsubsection{Calinski Harabasz Index}
+
+O índice \gls{CH} \cite{calinski1974dendrite} avalia a validade do grupo encontrado baseado na média entre a soma dos quadrados dentro do grupo:
+
+ evaluates the cluster validity based on the average between and within-cluster sum of squares:
+%\[
+%CH = \frac{\text{tr}(B_k)}{\text{tr}(W_{k})} \times \frac{n-k}{k-1},
+%\]
+%where $\text{tr}(B_k)$ is the trace of the between-cluster scatter matrix, $\text{tr}(W_{k})$ is the trace of the within-cluster scatter matrix, $n$ is the total number of data points, and $k$ is the number of clusters.
+\begin{align}
+CH = \frac{\sum_{k=1}^K n_k d^2(\mathbf{c}_k,\mathbf{c})}{\sum_{j=1}^K \sum_{\mathbf{x} \in C_k} d^2(\mathbf{x},\mathbf{c}_k)} \times \frac{n-K}{K-1},
+\end{align}
+
+
+sendo $K$ o númetro de clusters, $n_k$ o número de instancias no grupo $C_k$, $\mathbf{c}_k$ sendo o centroide do grupo $C_k$, $\mathbf{c}$ é o centroide geral, e por fim, $d(\mathbf{x},\mathbf{y})$ 
+é a distâncias Euclidiana entre as instâncias $\mathbf{x}$ and $\mathbf{y}$. Valores altos de \gls{CH}, indicam algoritmos com grupos melhor definidos.
+
+\subsubsection{Sillhoute Index}
+
+
+ 
+A métrica \gls{S}  \cite{rousseeuw1987silhouettes} avalia os resultados do agrupamento com base na diferença entre pares de distâncias entre clusters e dentro de clusters. Além disso, o número otimo de grupos pode ser obtido pela maximização do valor desta métrica. Tome $\mathbf{x}_i$ sendo a instancia sendo avaliada; $C_i$ sendo  o cluster que contem $\mathbf{x}_i$; $\mathcal{C}$ o conjunto de todos os grupos existentes; e $d(\mathbf{x}_i, \mathbf{x}_j)$ a distância entre os pontos $\mathbf{x}_i$ e $\mathbf{x}_j$. O \textit{Silhoutte score} para o ponto  $\mathbf{x}_i$ is defined as:
+
+\begin{align}\label{eq:s1}
+    S(\mathbf{x}_i) = \frac{b(\mathbf{x}_i) - a(\mathbf{x}_i)}{\max\{a(\mathbf{x}_i), b(\mathbf{x}_i)\}},
+\end{align}
+
+\noindent onde $a(\mathbf{x}_i)$ é a distância média entre a instância $\mathbf{x}_i$ e todas as outras instâncias em seu cluster e $b(\mathbf{x}_i)$ é a menor distância média entre a instância $\mathbf{x}_i$ e qualquer outro cluster, dado por:
+
+\begin{align}\label{eq:s2}
+    a(\mathbf{x}_i) = \frac{1}{|C_i| - 1} \sum_{\substack{\mathbf{x}_j \in C_i \\ j \ne i}} d(\mathbf{x}_i, \mathbf{x}_j),
+\end{align}
+
+e
+
+\begin{align}\label{eq:s3}
+    b(\mathbf{x}_i) = \min_{\substack{C \in \mathcal{C} \\ C \ne C_i}} \left( \frac{1}{|C|} \sum_{\mathbf{x}_j \in C} d(\mathbf{x}_i, \mathbf{x}_j) \right).
+\end{align}
+
+O índice de silhueta para toda a solução de agrupamento pode ser calculado como a média do índice de silhueta em todas as instâncias:
+
+\begin{align}\label{eq:s4}
+S = \frac{1}{n} \sum_{i=1}^{n} s(x_i)
+\end{align}
+
+\gls{S} possui o suporte definido em $[-1,1]$, com instâncias bem agrupadas apresentando valores próximos de $1$ e instâncias mal agrupadas apresentando valores próximos de $-1$.
+
+\subsubsection{Davies-Bouldin Index}
+
+O \gls{DB} \cite{davies1979cluster} avalia a qualidade de uma partição ao quantificar, em média, o grau de similaridade entre cada grupo e aquele que lhe é mais semelhante. Para isso, considera a razão entre a dispersão interna dos clusters e a separação entre eles, medida pela distância entre seus centroides. De modo geral, quanto menor o valor do índice, melhor é a estrutura de agrupamento obtida, sendo valores próximos de zero indicativos de clusters mais compactos e bem separados.
+
+\[
+\text{DB} = \frac{1}{K} \sum_{k=1}^K \max_{t \neq k} \left\{\frac{s_k + s_t}{d(\mathbf{c}_k, \mathbf{c}_t)}\right\},
+\]
+
+em que $K$ representa o número total de clusters, $\mathbf{c}_k$ corresponde ao centroide do cluster $k$, $s_k$ denota a distância média entre os pontos pertencentes ao cluster $k$ e seu respectivo centroide $\mathbf{c}_k$, e $d(\mathbf{c}_k, \mathbf{c}_t)$ indica a distância entre os centroides dos clusters $k$ e $t$.
+
+\subsection{ÍNDICES DE VALIDAÇÃO EXTERNOS}
+
+Índices de Validação Externas dependem do conhecimento prévio das classes verdadeiras das instâncias, isto é, pressupõem que exista uma partição de referência definida antecipadamente. Esses índices permitem avaliar o quão próxima a solução de agrupamento obtida está dessa partição conhecida, servindo como critério de comparação entre diferentes algoritmos de clustering. Dessa forma, são especialmente úteis em cenários experimentais nos quais há rótulos disponíveis para validação.
+
+\subsubsection{Mutual Information Index}
+
+A \gls{MI} \cite{strehl2002cluster} quantifica a quantidade de informação compartilhada entre a partição obtida pelo algoritmo de agrupamento e a partição de referência. Essa medida avalia o quanto o conhecimento dos rótulos preditos reduz a incerteza sobre os rótulos verdadeiros:
+
+\[
+MI(T, P) = \sum_{r=1}^{|T|} \sum_{s=1}^{|P|} p_{rs} \log\frac{p_{rs}}{p_r p_s},
+\]
+
+em que $|T|$ e $|P|$ correspondem ao número de classes distintas nas partições verdadeira e predita, respectivamente; $p_{rs}$ representa a proporção de instâncias simultaneamente pertencentes à classe verdadeira $r$ e ao cluster predito $s$; $p_r$ é a proporção de instâncias na classe verdadeira $r$; e $p_s$ é a proporção de instâncias no cluster predito $s$. O \gls{MI} assume valores no intervalo $[0,1]$, sendo que valores mais elevados indicam maior concordância entre as partições.
+
+\subsubsection{$V$-measure}
+
+A métrica  \gls{v} \cite{rosenberg2007vmeasure} avalia simultaneamente as propriedades de homogeneidade e completude de uma solução de agrupamento. Ela é definida como a média harmônica dessas duas quantidades:
+
+\[
+v = 2 \cdot \frac{\text{homogeneity} \cdot \text{completeness}}{\text{homogeneity} + \text{completeness}},
+\]
+
+em que
+
+\[
+\text{homogeneity} = 1 - \frac{H(C|P)}{H(C)}
+\quad \text{e} \quad
+\text{completeness} = 1 - \frac{H(P|C)}{H(P)}.
+\]
+
+Nesse contexto, $C$ representa o conjunto de rótulos verdadeiros e $P$ o conjunto de rótulos preditos; $H(C|P)$ é a entropia condicional dos rótulos verdadeiros dado os rótulos preditos; $H(C)$ é a entropia dos rótulos verdadeiros; $H(P|C)$ é a entropia condicional dos rótulos preditos dado os rótulos verdadeiros; e $H(P)$ é a entropia dos rótulos preditos. O $V$-measure também assume valores no intervalo $[0,1]$, sendo que valores mais próximos de $1$ indicam melhor qualidade do agrupamento.
+
+\subsubsection{Adjusted Rand Index}
+
+O \gls{ARI} \cite{hubert1985comparing} mede o grau de concordância entre uma partição de referência e a partição produzida por um algoritmo de clustering, ajustando o resultado para o efeito do acaso:
+
+\[
+ARI = \frac{\sum_{rs} \binom{n_{rs}}{2} - \left[\sum_r \binom{a_r}{2} \sum_s \binom{b_s}{2}\right] / \binom{n}{2}}
+{\frac{1}{2}\left[\sum_r \binom{a_r}{2} + \sum_s \binom{b_s}{2}\right] - \left[\sum_r \binom{a_r}{2} \sum_s \binom{b_s}{2}\right] / \binom{n}{2}},
+\]
+
+em que $n$ é o número total de instâncias; $n_{rs}$ corresponde ao número de instâncias atribuídas simultaneamente ao cluster $r$ na partição verdadeira e ao cluster $s$ na partição predita; $a_r$ é o número de instâncias no cluster $r$ da partição verdadeira; $b_s$ é o número de instâncias no cluster $s$ da partição predita; e $\binom{m}{2}$ indica o número de combinações de dois elementos escolhidos dentre $m$.
+
+O $ARI$ assume valores no intervalo $[-1,1]$, sendo que $1$ indica concordância perfeita entre as partições, enquanto valores próximos de $0$ (ou negativos) indicam concordância equivalente ao acaso. Além disso, o $ARI$ é relativamente robusto em relação ao número de clusters e à distribuição das instâncias entre eles.

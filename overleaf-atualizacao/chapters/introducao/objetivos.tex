@@ -1,0 +1,32 @@
+\section{Objetivos e Contribuições}
+\label{objetivos}
+
+O objetivo geral desta dissertação é desenvolver uma estrutura probabilística unificada para avaliação de modelos no contexto de \gls{AM}, com ênfase no cenário não supervisionado, fundamentada na \gls{TRI}. Busca-se reformular o problema de avaliação como um processo inferencial baseado na interação entre modelos e instâncias, no qual habilidades de modelos, dificuldades de instâncias e parâmetros de discriminação sejam tratados como quantidades latentes estimáveis. Diferentemente das abordagens tradicionais, que dependem de rótulos verdadeiros ou de métricas internas fortemente ancoradas em hipóteses geométricas, esta dissertação propõe uma perspectiva em que a qualidade de um modelo emerge de sua capacidade de lidar com instâncias de diferentes níveis de dificuldade dentro de um ecossistema de modelos concorrentes.
+
+Nesse contexto, o trabalho tem como propósito integrar avanços metodológicos na modelagem de \gls{TRI}, especialmente no que diz respeito à identificabilidade e interpretação do parâmetro de discriminação, à formulação de um novo paradigma para avaliação de métodos de clustering baseado na concordância entre modelos. Ao estabelecer essa conexão, a dissertação pretende fornecer não apenas um método prático para ranqueamento de modelos na ausência de rótulos, mas também um arcabouço teórico que permita compreender, de forma mais profunda, como modelos distintos respondem a estruturas complexas e regiões ambíguas do espaço de dados. Essa dissertação possui como objetivo específicos:
+
+\textcolor{red}{colocar essa contribuição como secundaria.}
+
+\textcolor{blue}{Correção: o $\beta^4$-\gls{IRT} passou a ser o último item nas duas listas (objetivos específicos e contribuições), deixando o \gls{CLAIRE} como contribuição principal.}
+
+\begin{itemize}
+    \item Formular o método \gls{CLAIRE} como um modelo probabilístico de avaliação de clustering baseado na concordância entre modelos, construindo uma matriz de respostas derivada de decisões pareadas entre instâncias;
+
+    \item Investigar empiricamente a capacidade do \gls{CLAIRE} de ranquear modelos de agrupamento na ausência de rótulos verdadeiros, comparando seus resultados com métricas externas tradicionais quando disponíveis;
+
+    \item Analisar a robustez do método diante da inserção de modelos aleatórios ou pouco informativos, avaliando sua capacidade de preservar a ordenação relativa dos modelos informativos;
+
+    \item Utilizar o modelo $\beta^4$-\gls{IRT}, introduzindo uma parametrização que separa o sinal e magnitude da discriminação, bem como investigar suas propriedades teóricas e empíricas quanto à recuperação de parâmetros e estabilidade de estimação.
+\end{itemize}
+
+Além dos objetivos delineados, esta dissertação apresenta as seguintes contribuições principais:
+
+\begin{itemize}
+    \item A introdução do método \gls{CLAIRE}, que reformula a avaliação de clustering como um problema de estimação de habilidade latente via \gls{TRI}, eliminando a necessidade de rótulos de referência;
+
+    \item A demonstração empírica de que a modelagem conjunta de habilidade, dificuldade e discriminação permite ranqueamentos consistentes e robustos mesmo em cenários com modelos ruidosos ou partições aleatórias;
+
+    \item O estabelecimento de um novo princípio conceitual para avaliação no aprendizado não supervisionado, baseado na interação entre modelos e instâncias, e não apenas na análise estática das partições produzidas;
+
+    \item A proposição do modelo $\beta^4$-\gls{IRT}, que mitiga problemas de não-identificabilidade associados ao parâmetro de discriminação em modelos $\beta^3$-\gls{IRT}, proporcionando maior estabilidade inferencial e interpretabilidade no contexto de ML.
+\end{itemize}

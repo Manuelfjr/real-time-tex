@@ -1,0 +1,75 @@
+\chapter{\gls{CLAIRE}: Clustering Evaluation based on Item Response Theory and Model Agreement}\label{chap:n4_claire}
+
+% \section{INTRODUCAO}
+
+A \textit{framework} proposta pelo \gls{CLAIRE} \cite{ferreira2025claire} fornece uma abordagem padronizada simples, tendo como objetivo superar desafios distintos associado a avaliação de métodos de agrupamento. \gls{CLAIRE} adota a \gls{TRI} para avaliar simultaneamente as habilidades diante um grupo de modelos de agrupamento, e também as dificuldades e discriminantes associados as instâncias de um dado conjunto de dados. Seguindo a numenclatura proposta pel \gls{TRI}, métodos de agrupamento são respondentes enquanto instâncias de um conjunto de dados são itens. Considerando a \gls{TRI} contínua, a resposta definida como $p_{ij}$ mensura até que ponto o respondente $i$ responde corretamente o item $j$. Em agrupamento, contudo, isso náo é diretamente facil a mensurar, se um modelo esta correto ou não, para uma instância em particular. Dessa forma, o \gls{CLAIRE} é capaz de capturar  a noção de correção, utilizado a concordância entre modelos. Uma resposta de um modelo de agrupamento para uma instância em particular será medida pela quantidade de concordância com outros modelos sobre como alocar esta instância.
+
+No \gls{CLAIRE}, a habilidade estimada pela \gls{TRI} para um respondente mede-se seu nível de concordância com os demais membros do grupo.
+Além disso, a habilidade será alta quando  modelos de agrupamento proporcionarem uma concordância melhor, não apenas para instâncias faceis, mas consistentemente para as dificeis.
+
+Essa é a principal diferenca entre habilidade estimada pelo \gls{TRI} quando comparado por exemplo a simplesmente a resposta média das instâncias. Em outras palavras, \gls{TRI} pondera instâncias de acordo com seus diferentes níveis de dificuldade. Para o \gls{CLAIRE}, o parâmetro de dificuldade pode ser interpretado como uma ambiguidade inerente da instância, quando agrupado por diferentes modelos de um determinado grupo. Esses aspectos têm sido abordados há décadas na \gls{TRI} ao realizar avaliação de respostas humanas, recentemnete em atribuito para o cenário de Aprendizado Supervisionado \cite{martinez:2019}, porém ainda não foi investigado na literatura no cerário de validação de agrupamentos.
+
+O trabalho atual encontra uma relação na Teoria de Consenso Cultural \cite{Batchelder88}, o qual modelos psicometricos são utilizados para mensurar alinhamento cultural de respondentes humanos respondendo itens com diferentes dificuldades. De maneira similar, o \gls{CLAIRE} consegue mensurar a probabilidade de concordância de um modelo de agrupamento, dado sua habilidade latente. A investigação de modelos psicometricos de consensus no contexto de \gls{IA} é original. Além de conseguri agrupar, o modelo proposto pode ser estendido para outros contextos de \gls{IA}, o qual o rótulo não é tão bem conhecido, como para detecção não supervisionada de outliers, \textit{one-class classfication} e \textit{test-time evaluation}.
+
+\section{Definição do Modelo}
+
+Nesta seção, será formulado a metodologia de entrada para o \gls{CLAIRE}. A entrada esperada para o método consiste em $M$ partições hard de $N$ instâncias, aonde cada partição representa um resultado de agrupamento para um conjunto de dados. A ideia princiapl do \gls{CLAIRE} é acessar a concordância entre modelos de agrupamento e estimar ambos parâmetros, dificuldade da instância e a habilidade dos modelos informados.
+
+Formalmente, tome $N$ sendo o número de instâncias em um conjunto de dados e $M$ o número de modelos de agrupamento. Além disso, considere que $P = \{p_{ij}\}_{i\leq M, j\leq N}$ seja a matriz de resposta, com $M$ linhas e $N$ colunas. Cada resposta $p_{ij}$ é computada ao medir a probabilidade de concordância do modelo $i$ para a instância $j$. Tome $c^{j,j'}_{i,i'}$ como a função indicadora entre os pares de modelos   $(i,i')$ e o par de instâncias $(j,j')$, temos então:
+
+\begin{equation}\label{eq:agree_indicator}
+    c^{j,j'}_{i,i'} = \begin{cases}
+    
+            1, & \mbox{if } 
+             \mathbb{I}(i,j,j')= \mathbb{I}(i',j,j'),  
+             
+             \\
+             
+             0, & \mbox{caso contrário},
+
+       \end{cases}
+\end{equation}
+\noindent aonde  $\mathbb{I}(i,j,j')=1$ se o par de modelos $(i, i')$ concorda que o par de instâncias $(j, j')$ são alocados no mesmo cluster ou se o par de modelos $(i, i')$ concorda que o par de isntâncias $(j, j')$ pertence a grupos distintos, caso contrario, temos $\mathbb{I}(i,j,j')=0$. Os elemtnos ($p_{ij}$) pertencente a matriz de resposta ($P$), modelado pelo método \gls{CLAIRE} serão as proporções de concordância ao londo das instâncias e modelos, dado por:
+
+\begin{equation}
+     p_{ij} = \frac{1}{(M - 1)\cdot (N - 1)}
+     \cdot\sum\limits_{\substack{i' \not = i}}\sum\limits_{\substack{j' \not = j}} c^{j, j'}_ {i, i'}.
+     \label{eq:response_matrix}
+\end{equation}
+
+\section{Concordância versus Corretude}\label{sec:agree_correctness}
+
+A hipótese central do \gls{CLAIRE} é que modelos de melhor qualidade tendem a produzir decisões semelhantes entre si. Dessa forma, o grau de concordância observado entre modelos ao avaliarem um mesmo par de instâncias pode ser utilizado como uma aproximação para uma resposta correta desconhecida. Em outras palavras, quando a maioria dos modelos avaliados é capaz de capturar adequadamente a estrutura de agrupamento presente nos dados, espera-se que a concordância entre eles esteja associada a bom desempenho. Embora essa ideia seja intuitiva, é importante analisar formalmente sob quais condições a concordância está efetivamente relacionada à correção.
+
+Dado um par de instâncias $k = (j, j')$ e um modelo $i$, assuma que $R_{i}^k$ como a probabilidade daqulee modelo $i$ dicidir corretamente se estas instâncias devem ser alocadas juntas ou não, em um mesmo cluster. Note que a noção de corretude no cenário de avaliação não supervisionada é latente, não observada, mas pode estar relacionada a outras variáveis observadas, como atribuições de cluster e concordância entre diferentes modelos. Especificamente, a probabilidade de concordância $A_{i,i'}^k = P(c_{i,i'}^k = 1)$ entre dois modelos $i$ e $i'$ pode ser definida como pela equação \ref{eq:aiilinha}.
+
+\begin{align} \label{eq:aiilinha}
+    A_{i,i'}^k = R_{i}^k \cdot R_{i'}^k + (1-R_{i}^k)\cdot (1-R_{i'}^k)
+\end{align}
+
+\noindent considerando os casos em que ambos os modelos respondem corretamente ao par $k$ e ambos os modelos respondem incorretamente ao par.
+
+Na verdade, concordância pode ser observada não apenas quando modelos são bons, mas também quando ambos modelos são ruins e geram respostas erradas. Dessa forma, nesta seção nos derivamos condições mais específicas em que a concordância está positivamente correlacionada com a corretude. Antes, a probabilidade definida na equação \ref{eq:aiilinha} pode ser adaptada para medir a concordância de um único modelo, sendo definida pela equação \ref{eq:aiilinhaunique}:
+
+\begin{align}\label{eq:aiilinhaunique}
+A_{i}^k  &=  \int_{i'}   A_{i,i'}^k P(i')di',  \\  \nonumber
+&= R_{i}^k \int_{i'} R_{i'}^k  P(i')di' + (1-R_{i}^k) \int_{i'}(1-R_{i'}^k)  P(i')di',\\ \nonumber
+& = R_{i}^k\cdot \omega_{k} + (1-R_{i}^k)\cdot (1-\omega_{k}),  \nonumber
+\end{align}
+
+\noindent sendo $\omega_{k}  = \int_{i'} R_{i'}^k P(i')di'$, aonde  $\omega_{k}$ é a probabilidade esperada da resposta correta ao longo do grupo de modelos informados. Por fim, a probabildiade de concordância do modelo $i$ pode ser reescrita e definida pela equação \ref{eq:redefinedprob}.
+
+\begin{align}\label{eq:redefinedprob}
+    A_{i}^k = (1 - \omega_k) + R_{i}^k(2\omega_{k} -1)
+\end{align}
+
+A correlação entre concordância e corretudo é dada por $2\omega_{k} -1$. Então, uma correlação positiva é alcançada quando $\omega_{k} > 0.5$, ou seja,  a probabilidade média das respostas corretas ao longo dos modelos não é pior do que a aleatorio. Considerando um bom grupo de modelos informados, nos temos que $\omega_{k} \rightarrow 1$, implicando que:
+
+
+\begin{equation}   A_{i}^k\rightarrow R_{i}^k,~ cor(A_{i}^k, R_{i}^k)  \rightarrow 1.
+\end{equation}
+O pressuposto que $\omega_{k} > 0.5$ em um conjunto de dados deve parecer forte, contudo, na prática, algoritmos de agruapemnto normalmente não esclhem partições de forma aleatoria. Além disso, algoritmos fortes tendem a ser escolhidos em aplicações práticas de forma que um desempenho melhor do que o aleatório não seja difícil de alcançar.
+
+Quando um conjunto de dados não possui uma determinada estrutura, a concordância será computada  contra partições geradas aleatoriamente. Devido a isso, a interpretação  das habilidades e dificuldades serão menos uteis porque a noção de corretude não esta defindia.
+
+\input{chapters/fundamentacao/experimentos_resultados}

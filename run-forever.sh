@@ -63,16 +63,19 @@ echo "Link atual em:   $URL_FILE (atualizado a cada (re)início)"
 echo "Ctrl+C para encerrar de vez."
 echo
 
-while true; do
-  ts() { date '+%Y-%m-%d %H:%M:%S'; }
+ts() { date '+%Y-%m-%d %H:%M:%S'; }
 
+start_server() {
   echo "[$(ts)] iniciando servidor..."
   node server.js >> "$LOG_DIR/server.log" 2>&1 &
   SERVER_PID=$!
   sleep 2
+}
 
+start_tunnel() {
   echo "[$(ts)] iniciando túnel..."
-  : > "$LOG_DIR/tunnel.log"
+  # keep the previous run's log (it says why the last tunnel died)
+  [ -f "$LOG_DIR/tunnel.log" ] && mv "$LOG_DIR/tunnel.log" "$LOG_DIR/tunnel.prev.log"
   cloudflared tunnel --protocol http2 --url "http://localhost:$PORT" >> "$LOG_DIR/tunnel.log" 2>&1 &
   TUNNEL_PID=$!
 
@@ -89,14 +92,26 @@ while true; do
   else
     echo "[$(ts)] não consegui capturar o link — veja $LOG_DIR/tunnel.log"
   fi
+}
 
-  # fica de olho nos dois processos; sai do laço quando algum cair
-  while kill -0 "$SERVER_PID" 2>/dev/null && kill -0 "$TUNNEL_PID" 2>/dev/null; do
-    sleep 5
-  done
+start_server
+start_tunnel
 
-  echo "[$(ts)] servidor ou túnel caiu — reiniciando em 5s..."
-  kill "$SERVER_PID" "$TUNNEL_PID" 2>/dev/null
-  rm -f "$URL_FILE"
+# Each process is restarted on its own: the tunnel drops far more often than
+# the server crashes (flaky networks), and restarting the server along with
+# it used to cut off in-flight requests (e.g. an assistant reply) for no
+# reason. The public link still changes whenever the tunnel restarts.
+while true; do
   sleep 5
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    wait "$SERVER_PID"; echo "[$(ts)] servidor caiu (código $?) — reiniciando o servidor em 5s..."
+    sleep 5
+    start_server
+  fi
+  if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+    wait "$TUNNEL_PID"; echo "[$(ts)] túnel caiu (código $?) — reiniciando o túnel em 5s..."
+    rm -f "$URL_FILE"
+    sleep 5
+    start_tunnel
+  fi
 done

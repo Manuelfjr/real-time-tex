@@ -1,0 +1,61 @@
+\section{Motivação}
+\label{motivacao}
+
+O avanço recente de algoritmos de agrupamento tem produzido uma grande diversidade de abordagens capazes de lidar com estruturas de dados complexas, incluindo métodos espectrais, baseados em grafos, em kernel, subespaço e modelos probabilísticos. Esses métodos diferem quanto às hipóteses assumidas, aos critérios de otimização e às representações implícitas do espaço de dados. Como consequência, é  comum que produzam partições substancialmente distintas para um mesmo conjunto de dados, especialmente quando a estrutura dos grupos não é hiperesférica, linearmente separável ou quando está restrita a subconjuntos específicos de variáveis.
+
+\textcolor{red}{vale a pena colocar uma referencia para a afirmação acima}
+
+\textcolor{blue}{Pendente: ainda não foi incluída uma referência para essa afirmação.}
+
+Embora o desenvolvimento metodológico de algoritmos de agrupamento tenha evoluído significativamente, o problema de avaliar esses métodos em cenários reais permanece em aberto. Dois cenários são representativos: no conjunto Iris \cite{fisher1936use}, amplamente utilizado como benchmark em tarefas de classificação e agrupamento, observa-se uma estrutura aproximadamente linearmente separável em determinadas projeções; já no conjunto sintético do tipo moons, os grupos apresentam geometria não convexa e forte sobreposição local.
+
+\textcolor{red}{nao vi muita necessidade da Figura 1.}
+
+\textcolor{blue}{Correção: a Figura 1 (conjuntos Iris e \textit{moons}) foi removida, junto com as referências a ela no texto.}
+
+Em aplicações práticas, não há acesso ao rótulo verdadeiro das instâncias, inviabilizando o uso de medidas externas tradicionais. Métricas internas, por sua vez, dependem fortemente de suposições geométricas e da métrica adotada \cite{wu2020decision,WOS:000172252500002,WOS:000232704100004,deborah2010survey}, podendo favorecer estruturas aproximadamente convexas em detrimento de formas mais complexas.
+
+\textcolor{red}{esse tipo de afirmação requer uma referencia.}
+
+\textcolor{blue}{Correção: adicionadas as referências \cite{wu2020decision,WOS:000172252500002,WOS:000232704100004,deborah2010survey}.}
+
+Além disso, tais métricas tratam implicitamente todas as instâncias como igualmente informativas, desconsiderando que determinadas regiões do espaço, particularmente aquelas próximas às fronteiras entre grupos, podem ser intrinsecamente mais ambíguas ou ruidosas. Essa heterogeneidade de dificuldade sugere que a avaliação de modelos não supervisionados não deve depender apenas da estrutura global dos agrupamentos, mas também da contribuição diferencial das instâncias individuais.
+
+Essa limitação revela um ponto conceitual importante: a avaliação de modelos não supervisionados tem sido tradicionalmente formulada como uma propriedade estática baseada na partição produzida, e náo como um resultado de uma interação mais complexa entre modelos e o conjunto de dados. No entanto, diferentes modelos podem apresentar comportamentos distintos diante de insâncias difíceis ou ambíguas. Ignorar essa heterogeneidade implica perder informação relevante sobre a qualidade relativa dos modelos.
+
+Nesse contexto, a \gls{TRI} oferece uma perspectiva alternativa. Originalmente desenvolvida na psicometria para modelar a interação entre respondentes e itens de teste, a \gls{TRI} permite estimar habilidades latentes e dificuldades de forma conjunta. Quanto transportada para o cenário de \gls{AM}, essa estrutura possiblita modelar algoritmos como respondentes e instâncias como itens, permitindo caracterizar não apenas o desempenho médio de um modelo, mas também sua capacidade de lidar com instâncias difíceis.
+
+\textcolor{red}{@Ricardo: Eu tiraria os dois paragrafos seguintes pra não misturar muito os assuntos.}
+
+\textcolor{blue}{Correção: os dois parágrafos sobre a adaptação da TRI ao contexto de AM e sobre a motivação do $\beta^4$-\gls{IRT} foram removidos.}
+
+Uma questão central da avaliação em clustering é: como estimar habilidade de modelos quando não há rótulo verdadeiro? A motivação para o método \gls{CLAIRE} surge exatamente dessa lacuna. Em vez de depender de uma partição de referência, o método explora a concordância entre modelos quanto ao agrupamento de pares de instâncias, construindo uma matriz de respostas que reflete o consenso no pool de modelos. Sob essa formulação, instâncias difíceis são aquelas nas quais apenas modelos de alta habilidade tendem a concordar, enquanto modelos fracos apresentam padrões de concordância inconsistentes.
+
+Essa abordagem introduz uma mudança de paradigma: a qualidade de um modelo passa a ser definida não por sua aderência a um rótulo externo, mas por sua posição relativa em um ecossistema de modelos, considerando explicitamente a dificuldade das instâncias. Além disso, essa formulação permite investigar o impacto de modelos aleatórios ou pouco informativos no processo de avaliação, analisar regiões de incerteza no espaço de dados e identificar instâncias potencialmente ruidosas, aspectos que métricas tradicionais não capturam de forma explícita.
+
+Portanto, a motivação desta dissertação emerge de duas lacunas complementares:
+
+\begin{itemize}
+    \item[i] a necessidade de modelos de \gls{TRI} mais robustos e interpretáveis no contexto de \gls{AM}, especialmente quanto à estimação de discriminação;
+    \item [ii] a ausência de uma estrutura probabilística que permita avaliar métodos de agrupamento sem depender de rótulos verdadeiros. 
+
+\end{itemize}
+
+Com a formulação do \gls{CLAIRE}, esta dissertação propõe uma estrutura unificada em que habilidade, dificuldade e discriminação são quantidades latentes estimáveis, oferecendo um novo princípio para avaliação no aprendizado não supervisionado.
+
+\textcolor{red}{Revisar o final acima pra tirar as referencias ao Beta4, ou então colocar um paragrafo agora dizendo que dentro do CLAIRE usou um modelo novo para estimação de parametros de dificuldade e discriminação. O importante eh mudar a ênfase e deixar o CLAIRE como a contribuição central da dissertação.}
+
+\textcolor{blue}{Correção: o parágrafo final foi reescrito sem as referências ao $\beta^4$-\gls{IRT}, deixando o \gls{CLAIRE} como contribuição central.}
+
+\textcolor{red}{Um outro ponto eh que vc menciona depois o termo discriminação. Seria bom em algum momento acima vc dizer explicitamente o que CRAIRE-TRI retorna: (1) habilidade de cada metodo; (2) dificuldade e discriminção de cada instancia de teste, e dar uma ideia do que a dificuldade mede e do que a discriminação mede. Mas nada muito extenso, seria mais para introduzir.}
+
+\textcolor{blue}{Pendente: ainda falta a frase explicando o que o \gls{CLAIRE} retorna (habilidade de cada modelo; dificuldade e discriminação de cada instância) e o que cada uma mede.}
+
+% Essa dissertação tem como objetivos específicos: 
+
+% \begin{itemize}
+%     \item Utilizar o modelo $\beta^4$-\gls{IRT}, introduzindo uma parametrização que separa o sinal e magnitude da discriminação, bem como investigar suas propriedades teóricas e empíricas quanto à recuperação de parâmetros e estabilidade de estimação
+%     \item Formular o método \gls{CLAIRE} como um modelo probabilístico de avaliação de clustering baseado na concordância entre modelos, construindo uma matriz de respostas derivada de decisões pareadas entre instâncias;
+%     \item Investigar empiricamente a capacidade do \gls{CLAIRE} de ranquear modelos de agrupamento na ausência de rótulos verdadeiros, comparando seus resultados com métricas externas tradicionais quando disponíveis;
+%     \item  Analisar a robustez do método diante da inserção de modelos aleatórios ou pouco informativos, avaliando sua capacidade de preservar a ordenação relativa dos modelos informativos.
+% \end{itemize}
