@@ -673,6 +673,34 @@ app.get('/api/projects/:id/raw', (req, res) => {
   }
 });
 
+// Baixar o projeto inteiro como .zip (como o "Download Source" do Overleaf),
+// já com as edições da tela; sem as pastas internas (.output, .yjs) e sem o
+// .project.json.
+app.get('/api/projects/:id/download.zip', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const root = projectDir(id);
+    if (!fs.existsSync(root)) return res.status(404).send('Projeto não encontrado.');
+    await flushProjectEdits(id);
+    const zip = new AdmZip();
+    (function add(dir, rel) {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name.startsWith('.')) continue; // .output, .yjs, .project.json…
+        const abs = path.join(dir, e.name);
+        const r = rel ? `${rel}/${e.name}` : e.name;
+        if (e.isDirectory()) add(abs, r);
+        else if (e.isFile()) zip.addFile(r, fs.readFileSync(abs));
+      }
+    })(root, '');
+    const name = String(readProjectMeta(id).name || 'projeto').replace(/[\\/:*?"<>|\x00-\x1f]+/g, '-').trim().slice(0, 80) || 'projeto';
+    res.set('Content-Type', 'application/zip');
+    res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(name)}.zip"; filename*=UTF-8''${encodeURIComponent(name)}.zip`);
+    res.send(zip.toBuffer());
+  } catch (err) {
+    res.status(500).send(String((err && err.message) || err));
+  }
+});
+
 app.get('/api/projects/:id/files', (req, res) => {
   res.json({ tree: buildFileTree(req.params.id, projectDir(req.params.id), '') });
 });

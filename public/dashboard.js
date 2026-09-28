@@ -94,6 +94,15 @@ function buildProjectCard(project) {
     deleteProject(project);
   });
 
+  const downloadBtn = document.createElement('a');
+  downloadBtn.className = 'tree-action';
+  downloadBtn.textContent = '⬇';
+  downloadBtn.title = 'Baixar o projeto (.zip)';
+  downloadBtn.href = `api/projects/${encodeURIComponent(project.id)}/download.zip`;
+  downloadBtn.style.textDecoration = 'none';
+  downloadBtn.addEventListener('click', (e) => e.stopPropagation());
+
+  actions.appendChild(downloadBtn);
   actions.appendChild(renameBtn);
   actions.appendChild(deleteBtn);
 

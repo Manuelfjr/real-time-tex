@@ -675,6 +675,8 @@ function applyProjectName(name) {
   projectNameInput.value = name;
   document.title = name ? `${name} — LaTeX Live` : 'LaTeX Live';
   downloadLink.href = api('/output.pdf');
+  const zipLink = document.getElementById('download-zip');
+  if (zipLink) zipLink.href = api('/download.zip');
   downloadLink.download = slugifyForFilename(name) + '.pdf';
 }
 
