@@ -60,10 +60,19 @@ const LEGACY_OUTPUT_DIR = path.join(ROOT_DIR, 'output');
 const DEFAULT_MAIN_FILE = 'main.tex';
 const DEFAULT_PROJECT_NAME = 'Documento sem título';
 
+// O nome do projeto vira o \title: caracteres especiais do LaTeX precisam de
+// escape (um "_" em "meu_projeto" quebrava a compilação no \maketitle).
+function latexEscapeTitle(text) {
+  return String(text)
+    .replace(/[{}\\]/g, '')
+    .replace(/([&%$#_])/g, '\\$1')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\^/g, '\\textasciicircum{}');
+}
+
 function defaultTexTemplate(name) {
-  const safeTitle = String(name || DEFAULT_PROJECT_NAME).replace(/[{}\\]/g, '');
+  const safeTitle = latexEscapeTitle(name || DEFAULT_PROJECT_NAME);
   return `\\documentclass{article}
-\\usepackage[utf8]{inputenc}
 
 \\title{${safeTitle}}
 \\author{}
