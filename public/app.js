@@ -298,6 +298,10 @@ async function handleCompileResult(result) {
   }
   logContent.textContent = result.log || '';
 
+  // PDF antigo à mostra quando a compilação falha: esmaecido e com aviso.
+  const staleBanner = document.getElementById('stale-banner');
+  staleBanner.classList.toggle('hidden', !!result.success || !pdfLoaded);
+  pdfViewerEl.classList.toggle('stale', !result.success && pdfLoaded);
   if (result.success) {
     try {
       await renderPdf(api('/output.pdf') + '?t=' + Date.now());

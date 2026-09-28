@@ -332,6 +332,9 @@ async function flushProjectEdits(id) {
   await Promise.allSettled(jobs);
 }
 
+// Último resultado de compilação por projeto: o assistente vê o erro e pode corrigi-lo.
+const lastCompile = new Map();
+
 async function processQueue(id) {
   const q = getQueue(id);
   q.running = true;
@@ -351,6 +354,7 @@ async function processQueue(id) {
         }
       }
       const result = await runCompile(id, contentToCompile, prep && prep.mainAbs);
+      lastCompile.set(id, { success: !!result.success, log: String(result.log || '').slice(-4000), at: Date.now() });
       if (prep && prep.notes && prep.notes.length) prepNote += `[figuras EPS] ${prep.notes.join('; ')}\n\n`;
       if (prep && prep.missingGhostscript) {
         prepNote += `[figuras EPS] O projeto tem ${prep.count} imagem(ns) EPS, e o Ghostscript (gs) não está instalado neste servidor, ` +
@@ -1080,6 +1084,11 @@ function aiFormatFileList(files, limit = 400) {
 // document. The change is written as a minimal delete+insert at the changed
 // span (not a whole-document replace) so collaborators' cursors and
 // concurrent typing elsewhere in the file are left alone.
+// Documentos que o assistente acabou de alterar: a gravação em disco que vem
+// logo em seguida usa a mesma checagem (intencional) da própria edição, em vez
+// de desfazê-la em silêncio pela heurística da colaboração.
+const aiIntentionalStores = new Set();
+
 async function aiMutateDocument(projectId, rel, mutate) {
   const isMain = rel === getMainFileRel(projectId);
   const conn = await hocuspocus.openDirectConnection(aiDocName(projectId, rel), { source: 'assistant' });
@@ -1105,9 +1114,26 @@ async function aiMutateDocument(projectId, rel, mutate) {
   } finally {
     // Persists to disk right away (runs onStoreDocument) instead of waiting
     // for the usual debounce, so a compile triggered next sees the change.
+    if (outcome && outcome.after !== undefined) aiIntentionalStores.add(aiDocName(projectId, rel));
     await conn.disconnect();
   }
   return outcome;
+}
+
+// Texto de um .docx: parágrafos do word/document.xml, sem formatação.
+function docxToText(abs) {
+  const zip = new AdmZip(abs);
+  const entry = zip.getEntry('word/document.xml');
+  if (!entry) throw new Error('Arquivo .docx sem word/document.xml.');
+  const xml = entry.getData().toString('utf8');
+  return xml
+    .replace(/<w:tab\/>/g, '\t')
+    .replace(/<w:br[^>]*\/>/g, '\n')
+    .replace(/<\/w:p>/g, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 // Acha old_text no arquivo. Primeiro a busca exata; se falhar, uma busca que
@@ -1360,6 +1386,15 @@ async function aiRunTool(projectId, name, input) {
       return { content: aiFormatFileList(aiListFiles(readId)), event: { name, status: 'ok', project: other } };
     }
 
+    if (name === 'read_file' && /\.docx$/i.test(String(input.path || ''))) {
+      // .docx: só leitura, como texto (parágrafos do word/document.xml).
+      const { abs, rel } = resolveProjectPath(readId, input.path);
+      if (!fs.existsSync(abs)) throw new Error(`"${rel}" não existe.`);
+      const text = docxToText(abs);
+      const body = text.length > AI_MAX_READ_CHARS ? text.slice(0, AI_MAX_READ_CHARS) + '\n[… cortado]' : text;
+      return { content: `${rel} (Word, convertido para texto; só leitura)\n\n${body}`, event: { name, status: 'ok', path: rel, project: other } };
+    }
+
     if (name === 'read_file') {
       const { abs, rel } = aiResolveTextFile(readId, input.path);
       const text = aiReadLive(readId, rel, abs);
@@ -1507,6 +1542,13 @@ app.post('/api/projects/:id/chat', async (req, res) => {
     } catch {
       // unknown/invalid/non-text file — just skip the extra context
     }
+  }
+
+  const lc = lastCompile.get(projectId);
+  if (lc && !lc.success) {
+    systemPrompt += `\n\nA ÚLTIMA COMPILAÇÃO FALHOU (o PDF que o usuário vê é antigo, de antes das mudanças recentes). ` +
+      `Fim do log:\n\`\`\`\n${lc.log}\n\`\`\`\nSe a pergunta tiver relação com o documento, explique a causa desse erro e ` +
+      `ofereça corrigi-lo; ao alterar o arquivo, corrija também o que provoca o erro.`;
   }
 
   const history = messages
@@ -1777,7 +1819,8 @@ const hocuspocus = new Hocuspocus({
     const ytext = document.getText('content');
     const content = ytext.toString();
     const onDisk = fs.existsSync(target.abs) ? fs.readFileSync(target.abs, 'utf8') : '';
-    const reason = detectDuplication(content, onDisk, target.relPath === getMainFileRel(target.projectId));
+    const intentional = aiIntentionalStores.delete(documentName);
+    const reason = detectDuplication(content, onDisk, target.relPath === getMainFileRel(target.projectId), intentional);
     if (reason) {
       // Left alone, a duplicated live document would block every later save
       // of this file. Put it back to the last saved version instead — the

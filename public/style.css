@@ -1091,3 +1091,11 @@ body.resizing .pdf-viewer, body.resizing .CodeMirror { pointer-events: none; }
 .fv-body.fv-pdf { padding: 0; }
 .fv-card { text-align: center; max-width: 380px; font-size: 14px; color: #c9cdd1; line-height: 1.5; }
 .fv-card .fv-icon { font-size: 44px; margin-bottom: 10px; }
+
+/* PDF antigo: a compilação atual falhou */
+.preview-container { position: relative; }
+.stale-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6; max-width: 92%;
+  background: #fff4e5; color: #7d470a; border: 1px solid #f5c38b; border-radius: 10px; padding: 9px 14px; font-size: 13px; line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0,0,0,.25); text-align: center; }
+.stale-banner.hidden { display: none; }
+.pdf-viewer.stale { opacity: .45; filter: grayscale(.6); }
