@@ -1,0 +1,112 @@
+/* Documento no padrão Instituto Kunumi (Brandbook Kunumi 2025, via kunumi-design):
+   páginas Gelo, títulos em Space Grotesk maiúsculo (+3%) em Urucum, texto em
+   Figtree Chumbo, secundário em Grafite, fios em Concreto. Branco só como
+   cartão sobre Gelo; preto e branco puros não entram. Capa com o degradê
+   oficial do Instituto (arquivo fornecido, sem recriar). */
+@font-face { font-family: "Space Grotesk"; src: url("marca/SpaceGrotesk.ttf") format("truetype"); font-weight: 300 700; }
+@font-face { font-family: "Figtree"; src: url("marca/Figtree.ttf") format("truetype"); font-weight: 300 900; }
+
+:root {
+  --urucum: #F04E44; --chumbo: #1C2127; --grafite: #5E5E5E; --concreto: #B4ADA4; --gelo: #F0F0F0;
+  --raised: #FFFFFF; /* só como cartão sobre Gelo */
+  --chart-blue: #4392D2; --chart-cyan: #2FB7CF; --chart-green: #62CCA3; --chart-olive: #A0C068; --chart-yellow: #F0D449;
+
+  /* Documentos: páginas brancas (o padrão de documentos aceita Gelo ou branco), cartões em Gelo. */
+  --surface-page: #FFFFFF;
+  --surface-card: var(--gelo);
+  --surface-sunken: var(--gelo);
+  --text-strong: var(--chumbo);
+  --text-body: var(--chumbo);
+  --text-muted: var(--grafite);
+  --text-faint: var(--grafite);
+  --text-accent: var(--urucum);
+  --border-subtle: rgba(28, 33, 39, .12);
+  --border-default: var(--concreto);
+
+  --display: "PP Neue Machina", "PP Neue Machina Inktrap", "Space Grotesk", "Figtree", Arial, sans-serif;
+  --font-sans: "Figtree", Arial, sans-serif;
+  --track-display: .03em;
+  --track-menu: .1em;
+  --tracking-caps: .1em;
+  --radius: 10px;
+  --radius-sm: 4px; --radius-md: 10px; --radius-lg: 10px; --radius-pill: 4px;
+  --shadow-sm: none;
+}
+
+* { box-sizing: border-box; }
+@page { size: A4; margin: 12mm 0 13mm 0; }
+@page capa { margin: 0; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: 11px; line-height: 1.6; font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+b, strong { font-weight: 650; color: var(--text-strong); }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92em; background: var(--raised); border: 1px solid var(--border-subtle); padding: .02em .35em; border-radius: var(--radius-sm); }
+main { padding: 4mm 16mm 4mm; }
+
+/* ---------- capa: página inteira, degradê do Instituto ---------- */
+.cover {
+  height: 297mm; padding: 18mm 16mm 16mm;
+  display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--chumbo) url("marca/inst-gradiente.jpg") center bottom / cover no-repeat;
+  color: var(--gelo); break-after: page; page: capa;
+}
+.cover-brand img { height: 84px; width: auto; display: block; margin: -14px 0 0 -26px; }
+.cover-body { display: flex; flex-direction: column; gap: 18px; max-width: 150mm; }
+.cover-eyebrow { font: 500 10.5px/1.2 var(--display); letter-spacing: var(--track-menu); text-transform: uppercase; color: var(--gelo); opacity: .85; }
+.cover h1 { font: 600 72px/1.05 var(--display); letter-spacing: var(--track-display); text-transform: uppercase; margin: 0; color: var(--gelo); }
+.cover h1 .sub { display: block; font: 400 19px/1.45 var(--font-sans); letter-spacing: 0; text-transform: none; margin-top: 16px; opacity: .95; }
+.cover p.lead { font-size: 13px; line-height: 1.65; color: var(--gelo); opacity: .9; margin: 0; max-width: 62ch; }
+.cover-meta { display: flex; gap: 26px; flex-wrap: wrap; font: 500 9px/1.4 var(--display); letter-spacing: var(--track-menu); text-transform: uppercase; color: var(--gelo); opacity: .9; border-top: 1px solid rgba(240, 240, 240, .4); padding-top: 12px; }
+.cover-meta strong { display: block; font: 600 11.5px/1.4 var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--gelo); margin-top: 2px; }
+
+/* ---------- seções ---------- */
+section.block { margin-bottom: 26px; break-inside: auto; }
+section.block > h2 {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font: 600 17px/1.3 var(--display); letter-spacing: var(--track-display); text-transform: uppercase;
+  color: var(--urucum);
+  border-bottom: 1px solid var(--concreto);
+  padding: 0 0 8px; margin: 0 0 14px;
+  break-after: avoid;
+}
+section.block h3.sub { font: 600 12.5px/1.35 var(--display); letter-spacing: var(--track-display); text-transform: uppercase; color: var(--text-strong); margin: 14px 0 8px; }
+section.block p { margin: 0 0 9px; }
+section.block p:last-child { margin-bottom: 0; }
+.keep { break-inside: avoid; }
+
+.badge { display: inline-flex; align-items: center; padding: .3em .7em; border-radius: var(--radius-sm); border: 1px solid var(--concreto); font: 500 8px/1.2 var(--display); letter-spacing: var(--track-menu); text-transform: uppercase; color: var(--grafite); white-space: nowrap; }
+.badge-amber, .badge-ok, .badge-verde, .badge-type { color: var(--grafite); }
+.badge-amber { border-color: var(--urucum); color: var(--urucum); }
+
+.card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.card-tile { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: 12px 14px; break-inside: avoid; position: relative; overflow: hidden; }
+.card-tile::before { content: ""; position: absolute; left: 0; top: 0; width: 34px; height: 2px; background: var(--urucum); }
+.card-tile .k { font: 500 8px/1.3 var(--display); letter-spacing: var(--track-menu); text-transform: uppercase; color: var(--urucum); margin-bottom: 4px; }
+.card-tile .v { font-size: 11px; color: var(--text-strong); }
+
+ul.bullet-list { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+ul.bullet-list li { padding-left: 14px; position: relative; }
+ul.bullet-list li::before { content: ""; position: absolute; left: 0; top: .62em; width: 6px; height: 2px; background: var(--urucum); }
+
+.pull-quote { border-left: 2px solid var(--urucum); padding: 4px 0 4px 14px; font-size: 11.5px; color: var(--text-body); margin: 12px 0; }
+
+table.kp-table { break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 10.5px; }
+table.kp-table th, table.kp-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); }
+table.kp-table th { font: 500 8px/1.3 var(--display); letter-spacing: var(--track-menu); text-transform: uppercase; color: var(--grafite); border-bottom: 1px solid var(--concreto); }
+table.kp-table tr.total td { font-weight: 650; color: var(--text-strong); border-top: 1px solid var(--chumbo); border-bottom: none; }
+
+.mockup-figure { margin: 12px 0; break-inside: avoid; }
+.mockup-figure .cap { font: 600 10px/1.3 var(--display); letter-spacing: var(--track-display); text-transform: uppercase; color: var(--text-strong); margin: 0 0 3px; }
+.mockup-figure .cap-note { font-size: 9.5px; color: var(--text-muted); margin: 0 0 6px; }
+.mockup-figure svg, .mockup-figure img { width: 100%; height: auto; display: block; border-radius: var(--radius); border: 1px solid var(--border-subtle); }
+code { background: var(--gelo); }
+
+footer.page-footer { margin: 0 16mm; padding: 12px 0 0; color: var(--grafite); font-size: 8.5px; border-top: 1px solid var(--concreto); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+footer.page-footer img { height: 34px; width: auto; display: block; margin: -6px 0 -6px -10px; }
+footer.page-footer .sic { display: block; font-style: italic; font-weight: 300; letter-spacing: .04em; color: var(--concreto); margin-top: 3px; text-align: right; }

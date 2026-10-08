@@ -1,134 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+<!-- sic parvis magna -->
 <head>
 <meta charset="UTF-8">
 <title>LaTeX Live: proposta de plataforma própria</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet" />
-<style>
-:root {
-  --urucum:   #F04E44;
-  --chumbo:   #1C2127;
-  --grafite:  #5E5E5E;
-  --concreto: #B4ADA4;
-  --gelo:     #F0F0F0;
-  --white:    #FFFFFF;
-  --amarelo:  #FF931E;
-  --verde-400: #43F085;
-  --verde-dark: #246A3C;
-  --indigo: #3A2FDF;
-
-  --surface-page:   var(--gelo);
-  --surface-card:   var(--white);
-  --surface-sunken: #E6E6E6;
-
-  --text-strong: var(--chumbo);
-  --text-body:   #34383E;
-  --text-muted:  var(--grafite);
-  --text-faint:  var(--concreto);
-  --text-accent: var(--urucum);
-
-  --border-subtle:  rgba(28,33,39,0.12);
-  --border-default: rgba(28,33,39,0.22);
-
-  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --tracking-caps: 0.14em;
-
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-pill: 999px;
-
-  --shadow-sm: 0 1px 3px rgba(28,33,39,0.08), 0 1px 2px rgba(28,33,39,0.06);
-}
-* { box-sizing: border-box; }
-@page { size: A4; margin: 0; }
-html, body {
-  margin: 0; padding: 0;
-  background: var(--surface-page);
-  color: var(--text-body);
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-}
-main { padding: 30px 44px 40px; }
-
-.cover {
-  background: var(--chumbo);
-  color: var(--gelo);
-  padding: 40px 44px 34px;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-.cover-brand { display: flex; align-items: center; gap: 10px; }
-.cover-brand img { width: 26px; height: 26px; display: block; }
-.cover-brand span { font-size: 10px; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--concreto); }
-.cover-eyebrow { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--urucum); }
-.cover h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.08; margin: 0; color: var(--white); }
-.cover p.lead { font-size: 13px; color: var(--concreto); max-width: 62ch; margin: 0; }
-.cover-meta { display: flex; gap: 22px; margin-top: 4px; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--concreto); }
-.cover-meta strong { color: var(--white); font-weight: 600; letter-spacing: normal; text-transform: none; }
-
-section.block { margin-bottom: 30px; break-inside: avoid; }
-section.block > h2 {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  font-size: 19px; line-height: 1.25; letter-spacing: -0.01em;
-  color: var(--text-strong); font-weight: 700;
-  border-left: 4px solid var(--urucum);
-  border-bottom: 1px solid var(--border-default);
-  padding: 2px 0 8px 12px; margin: 0 0 14px;
-  break-after: avoid;
-}
-section.block > h2 .badge { font-size: 9px; }
-section.block h3.sub { font-size: 13.5px; font-weight: 700; color: var(--text-strong); margin: 0 0 10px; }
-section.block p { margin: 0 0 9px; color: var(--text-body); }
-section.block p:last-child { margin-bottom: 0; }
-
-.badge { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.22em 0.75em; border-radius: var(--radius-pill); font-size: 8.5px; font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; white-space: nowrap; }
-.badge-type  { background: color-mix(in srgb, var(--indigo) 12%, white); color: var(--indigo); }
-.badge-verde { background: color-mix(in srgb, var(--verde-dark) 14%, white); color: var(--verde-dark); }
-.badge-amber { background: color-mix(in srgb, var(--amarelo) 18%, white); color: #7D470A; }
-
-.card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.card-tile { background: var(--surface-card); border: 1px solid var(--border-subtle); border-top: 3px solid var(--urucum); border-radius: var(--radius-lg); padding: 12px 14px; box-shadow: var(--shadow-sm); break-inside: avoid; }
-.card-tile .k { font-size: 8.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-caps); margin-bottom: 3px; font-weight: 700; }
-.card-tile .v { font-size: 11.5px; color: var(--text-strong); font-weight: 500; }
-
-ul.bullet-list { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 6px; }
-ul.bullet-list li { padding-left: 0.15em; }
-
-.pull-quote { background: var(--surface-card); border-left: 3px solid var(--text-accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 10px 14px; font-size: 11px; color: var(--text-body); margin: 10px 0; }
-
-table.kp-table { break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 10.5px; background: var(--surface-card); border-radius: var(--radius-md); overflow: hidden; }
-table.kp-table th, table.kp-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); }
-table.kp-table th { background: var(--surface-sunken); font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 700; }
-table.kp-table tr:last-child td { border-bottom: none; }
-table.kp-table tr.total td { font-weight: 700; color: var(--text-strong); background: var(--surface-sunken); }
-
-.mockup-figure { margin: 12px 0; break-inside: avoid; }
-.mockup-figure .cap { font-size: 11px; font-weight: 600; color: var(--text-strong); margin: 0 0 4px; }
-.mockup-figure .cap-note { font-size: 10px; color: var(--text-muted); margin: 0 0 6px; }
-.mockup-figure svg, .mockup-figure img { width: 100%; height: auto; display: block; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm); }
-
-footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-size: 8.5px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; }
-</style>
+<link rel="stylesheet" href="kunumi-doc.css" />
 </head>
 <body>
 
 <div class="cover">
-  <div class="cover-brand">
-    <img src="assets/kunumi-mark.png" alt="Kunumi">
-    <span>Kunumi &middot; Instituto</span>
-  </div>
-  <span class="cover-eyebrow">Proposta interna &middot; Setembro 2026</span>
-  <h1>LaTeX Live<br>uma alternativa ao Overleaf nascida de uma dor real</h1>
-  <p class="lead">Editor de LaTeX próprio, com colaboração em tempo real e assistente de IA já rodando hoje, pensado para dar ao instituto visibilidade sobre o que está sendo produzido.</p>
-  <div class="cover-meta">
-    <span>Autor <strong>Manuel Ferreira</strong></span>
-    <span>Status <strong>Em uso por beta testers, pré-adoção institucional</strong></span>
+  <div class="cover-brand"><img src="marca/instituto-negativo.svg" alt="Instituto Kunumi"></div>
+  <div class="cover-body">
+    <span class="cover-eyebrow">Proposta interna &middot; Setembro de 2026</span>
+    <h1>LaTeX Live<span class="sub">Uma alternativa ao Overleaf nascida de uma dor real.</span></h1>
+    <p class="lead">Editor de LaTeX próprio, com colaboração em tempo real e assistente de IA já rodando hoje, pensado para dar ao instituto visibilidade sobre o que está sendo produzido.</p>
+    <div class="cover-meta">
+      <span>Autor<strong>Manuel Ferreira</strong></span>
+      <span>Status<strong>Em uso por beta testers, pré-adoção institucional</strong></span>
+    </div>
   </div>
 </div>
 
@@ -178,7 +67,6 @@ footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-siz
   </div>
 </section>
 
-<div style="page-break-before: always;"></div>
 
 <section class="block">
   <h2>Por que isso é melhor que o Overleaf</h2>
@@ -190,31 +78,31 @@ footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-siz
     <li><strong>Evolução guiada por dor real</strong>, validada com pesquisadores de diferentes áreas, não por suposição</li>
   </ul>
   <div class="mockup-figure" style="margin-top:14px">
-    <svg viewBox="0 0 800 172" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
-      <rect x="1" y="1" width="798" height="170" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
-      <circle cx="90" cy="56" r="26" fill="#ECFDF5"/>
-      <text x="90" y="64" font-size="16" font-weight="700" fill="#246A3C" text-anchor="middle">R$0</text>
-      <text x="90" y="108" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Custo zero</text>
-      <text x="90" y="124" font-size="10" fill="#6B7280" text-anchor="middle">hoje, sem gastar nada</text>
-      <circle cx="248" cy="56" r="26" fill="#EEF2FF"/>
-      <text x="248" y="65" font-size="20" font-weight="700" fill="#3A2FDF" text-anchor="middle">&#8734;</text>
-      <text x="248" y="108" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Sem limites</text>
-      <text x="248" y="124" font-size="10" fill="#6B7280" text-anchor="middle">de plano, só de hardware</text>
-      <circle cx="406" cy="56" r="26" fill="#FEF3C7"/>
-      <rect x="396" y="54" width="20" height="16" rx="3" fill="#7D470A"/>
-      <path d="M 400 54 L 400 47 A 6 6 0 0 1 412 47 L 412 54" fill="none" stroke="#7D470A" stroke-width="3"/>
-      <text x="406" y="108" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Dados próprios</text>
-      <text x="406" y="124" font-size="10" fill="#6B7280" text-anchor="middle">em disco, não na nuvem de terceiro</text>
-      <circle cx="564" cy="56" r="26" fill="#F0F9FF"/>
-      <path d="M 550 46 h 28 a 6 6 0 0 1 6 6 v 8 a 6 6 0 0 1 -6 6 h -16 l -8 7 v -7 h -4 a 6 6 0 0 1 -6 -6 v -8 a 6 6 0 0 1 6 -6 z" fill="#0EA5E9"/>
-      <text x="564" y="108" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">IA já integrada</text>
-      <text x="564" y="124" font-size="10" fill="#6B7280" text-anchor="middle">Claude dentro do editor, hoje</text>
-      <circle cx="722" cy="56" r="26" fill="#FDECEA"/>
+    <svg viewBox="0 0 800 172" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, Arial, sans-serif">
+      <rect x="1" y="1" width="798" height="170" rx="12" fill="#FFFFFF" stroke="#B4ADA4"/>
+      <circle cx="90" cy="56" r="26" fill="#F0F0F0"/>
+      <text x="90" y="64" font-size="16" font-weight="700" fill="#1C2127" text-anchor="middle">R$0</text>
+      <text x="90" y="108" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Custo zero</text>
+      <text x="90" y="124" font-size="10" fill="#5E5E5E" text-anchor="middle">hoje, sem gastar nada</text>
+      <circle cx="248" cy="56" r="26" fill="#F0F0F0"/>
+      <text x="248" y="65" font-size="20" font-weight="700" fill="#1C2127" text-anchor="middle">&#8734;</text>
+      <text x="248" y="108" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Sem limites</text>
+      <text x="248" y="124" font-size="10" fill="#5E5E5E" text-anchor="middle">de plano, só de hardware</text>
+      <circle cx="406" cy="56" r="26" fill="#F0F0F0"/>
+      <rect x="396" y="54" width="20" height="16" rx="3" fill="#5E5E5E"/>
+      <path d="M 400 54 L 400 47 A 6 6 0 0 1 412 47 L 412 54" fill="none" stroke="#5E5E5E" stroke-width="3"/>
+      <text x="406" y="108" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Dados próprios</text>
+      <text x="406" y="124" font-size="10" fill="#5E5E5E" text-anchor="middle">em disco, não na nuvem de terceiro</text>
+      <circle cx="564" cy="56" r="26" fill="#F0F0F0"/>
+      <path d="M 550 46 h 28 a 6 6 0 0 1 6 6 v 8 a 6 6 0 0 1 -6 6 h -16 l -8 7 v -7 h -4 a 6 6 0 0 1 -6 -6 v -8 a 6 6 0 0 1 6 -6 z" fill="#1C2127"/>
+      <text x="564" y="108" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">IA já integrada</text>
+      <text x="564" y="124" font-size="10" fill="#5E5E5E" text-anchor="middle">Claude dentro do editor, hoje</text>
+      <circle cx="722" cy="56" r="26" fill="#F0F0F0"/>
       <path d="M 710 66 L 720 52 L 727 60 L 736 45" fill="none" stroke="#F04E44" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M 728 45 L 736 45 L 736 53" fill="none" stroke="#F04E44" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="722" y="108" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Evolução real</text>
-      <text x="722" y="124" font-size="10" fill="#6B7280" text-anchor="middle">guiada por dor validada</text>
-      <text x="400" y="152" font-size="9.5" fill="#9CA3AF" text-anchor="middle">Validado em 5 conversas independentes, em pesquisa e em Testes &amp; Aplicação</text>
+      <text x="722" y="108" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Evolução real</text>
+      <text x="722" y="124" font-size="10" fill="#5E5E5E" text-anchor="middle">guiada por dor validada</text>
+      <text x="400" y="152" font-size="9.5" fill="#5E5E5E" text-anchor="middle">Validado em 5 conversas independentes, em pesquisa e em Testes &amp; Aplicação</text>
     </svg>
   </div>
 </section>
@@ -232,9 +120,9 @@ footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-siz
   <div class="mockup-figure" style="margin-top:10px">
     <p class="cap">Grafo de relação de conteúdos</p>
     <p class="cap-note">Conceito, ainda não implementado: pesquisadores e temas conectados automaticamente por proximidade de conteúdo. Clique num trabalho no grafo para ver o resumo do conteúdo, sem sair da tela.</p>
-    <svg viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
-      <rect width="800" height="460" fill="#0B1220"/>
-      <g stroke="#1E293B" stroke-width="1" opacity="0.8">
+    <svg viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, Arial, sans-serif">
+      <rect width="800" height="460" fill="#1C2127"/>
+      <g stroke="#1C2127" stroke-width="1" opacity="0.8">
         <line x1="60" y1="120" x2="140" y2="205"/>
         <line x1="430" y1="230" x2="330" y2="255"/>
         <line x1="500" y1="300" x2="565" y2="330"/>
@@ -244,135 +132,134 @@ footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-siz
         <line x1="60" y1="400" x2="120" y2="320"/>
         <line x1="470" y1="270" x2="565" y2="310"/>
       </g>
-      <g fill="#334155">
+      <g fill="#5E5E5E">
         <circle cx="60" cy="120" r="5"/><circle cx="430" cy="230" r="5"/><circle cx="500" cy="300" r="5"/>
         <circle cx="250" cy="60" r="5"/><circle cx="720" cy="420" r="5"/><circle cx="430" cy="410" r="5"/>
         <circle cx="60" cy="400" r="5"/><circle cx="470" cy="270" r="5"/>
       </g>
-      <g stroke="#334155" stroke-width="1.5" opacity="0.7">
+      <g stroke="#5E5E5E" stroke-width="1.5" opacity="0.7">
         <line x1="140" y1="250" x2="330" y2="120"/>
         <line x1="330" y1="120" x2="600" y2="340"/>
         <line x1="600" y1="340" x2="300" y2="375"/>
         <line x1="300" y1="375" x2="140" y2="250"/>
         <line x1="140" y1="250" x2="600" y2="340"/>
       </g>
-      <circle cx="140" cy="250" r="78" fill="#4F46E5" opacity="0.10"/>
-      <g stroke="#6366F1" stroke-width="1.5" opacity="0.6">
+      <circle cx="140" cy="250" r="78" fill="#4392D2" opacity="0.10"/>
+      <g stroke="#4392D2" stroke-width="1.5" opacity="0.6">
         <line x1="140" y1="250" x2="100" y2="205"/><line x1="140" y1="250" x2="175" y2="195"/>
         <line x1="140" y1="250" x2="195" y2="235"/><line x1="140" y1="250" x2="180" y2="290"/>
         <line x1="140" y1="250" x2="120" y2="300"/><line x1="140" y1="250" x2="85" y2="260"/>
       </g>
-      <circle cx="140" cy="250" r="22" fill="#4F46E5"/>
+      <circle cx="140" cy="250" r="22" fill="#4392D2"/>
       <text x="140" y="255" font-size="11" fill="#FFFFFF" text-anchor="middle">Roberta</text>
-      <circle cx="100" cy="205" r="10" fill="#6366F1"/><circle cx="195" cy="235" r="10" fill="#6366F1"/>
-      <circle cx="180" cy="290" r="10" fill="#6366F1"/><circle cx="120" cy="300" r="10" fill="#6366F1"/>
-      <circle cx="85" cy="260" r="9" fill="#6366F1"/>
-      <text x="140" y="345" font-size="12" fill="#A5B4FC" text-anchor="middle">Fairness &amp; credito</text>
+      <circle cx="100" cy="205" r="10" fill="#4392D2"/><circle cx="195" cy="235" r="10" fill="#4392D2"/>
+      <circle cx="180" cy="290" r="10" fill="#4392D2"/><circle cx="120" cy="300" r="10" fill="#4392D2"/>
+      <circle cx="85" cy="260" r="9" fill="#4392D2"/>
+      <text x="140" y="345" font-size="12" fill="#4392D2" text-anchor="middle">Fairness &amp; credito</text>
       <circle cx="175" cy="195" r="20" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-      <circle cx="175" cy="195" r="16" fill="#818CF8"/>
-      <text x="175" y="199" font-size="10" fill="#1E1B4B" text-anchor="middle" font-weight="700">Roberta</text>
-      <path d="M 190 208 L 190 224 L 193.5 220.5 L 196 227 L 199 225.5 L 196.2 219 L 201 219 Z" fill="#FFFFFF" stroke="#0B1220" stroke-width="1"/>
-      <circle cx="330" cy="120" r="72" fill="#0EA5E9" opacity="0.10"/>
-      <g stroke="#38BDF8" stroke-width="1.5" opacity="0.6">
+      <circle cx="175" cy="195" r="16" fill="#4392D2"/>
+      <text x="175" y="199" font-size="10" fill="#1C2127" text-anchor="middle" font-weight="700">Roberta</text>
+      <path d="M 190 208 L 190 224 L 193.5 220.5 L 196 227 L 199 225.5 L 196.2 219 L 201 219 Z" fill="#FFFFFF" stroke="#1C2127" stroke-width="1"/>
+      <circle cx="330" cy="120" r="72" fill="#2FB7CF" opacity="0.10"/>
+      <g stroke="#2FB7CF" stroke-width="1.5" opacity="0.6">
         <line x1="330" y1="120" x2="290" y2="80"/><line x1="330" y1="120" x2="365" y2="85"/>
         <line x1="330" y1="120" x2="380" y2="135"/><line x1="330" y1="120" x2="345" y2="165"/>
         <line x1="330" y1="120" x2="295" y2="150"/>
       </g>
-      <circle cx="330" cy="120" r="20" fill="#0EA5E9"/>
+      <circle cx="330" cy="120" r="20" fill="#2FB7CF"/>
       <text x="330" y="125" font-size="10.5" fill="#FFFFFF" text-anchor="middle">Juarez</text>
-      <circle cx="290" cy="80" r="9" fill="#38BDF8"/><circle cx="365" cy="85" r="9" fill="#38BDF8"/>
-      <circle cx="380" cy="135" r="9" fill="#38BDF8"/><circle cx="345" cy="165" r="9" fill="#38BDF8"/>
-      <circle cx="295" cy="150" r="9" fill="#38BDF8"/>
-      <text x="330" y="210" font-size="12" fill="#7DD3FC" text-anchor="middle">Transformers &amp; RT</text>
-      <circle cx="300" cy="375" r="72" fill="#F59E0B" opacity="0.10"/>
-      <g stroke="#FBBF24" stroke-width="1.5" opacity="0.6">
+      <circle cx="290" cy="80" r="9" fill="#2FB7CF"/><circle cx="365" cy="85" r="9" fill="#2FB7CF"/>
+      <circle cx="380" cy="135" r="9" fill="#2FB7CF"/><circle cx="345" cy="165" r="9" fill="#2FB7CF"/>
+      <circle cx="295" cy="150" r="9" fill="#2FB7CF"/>
+      <text x="330" y="210" font-size="12" fill="#2FB7CF" text-anchor="middle">Transformers &amp; RT</text>
+      <circle cx="300" cy="375" r="72" fill="#F0D449" opacity="0.10"/>
+      <g stroke="#F0D449" stroke-width="1.5" opacity="0.6">
         <line x1="300" y1="375" x2="260" y2="335"/><line x1="300" y1="375" x2="330" y2="330"/>
         <line x1="300" y1="375" x2="345" y2="390"/><line x1="300" y1="375" x2="295" y2="420"/>
         <line x1="300" y1="375" x2="255" y2="400"/>
       </g>
-      <circle cx="300" cy="375" r="20" fill="#F59E0B"/>
-      <text x="300" y="380" font-size="10.5" fill="#1E293B" text-anchor="middle">Isadora</text>
-      <circle cx="260" cy="335" r="9" fill="#FBBF24"/><circle cx="330" cy="330" r="9" fill="#FBBF24"/>
-      <circle cx="345" cy="390" r="9" fill="#FBBF24"/><circle cx="295" cy="420" r="8" fill="#FBBF24"/>
-      <circle cx="255" cy="400" r="9" fill="#FBBF24"/>
-      <text x="300" y="450" font-size="12" fill="#FCD34D" text-anchor="middle">Busca semantica</text>
-      <circle cx="600" cy="340" r="72" fill="#A855F7" opacity="0.10"/>
-      <g stroke="#C084FC" stroke-width="1.5" opacity="0.6">
+      <circle cx="300" cy="375" r="20" fill="#F0D449"/>
+      <text x="300" y="380" font-size="10.5" fill="#1C2127" text-anchor="middle">Isadora</text>
+      <circle cx="260" cy="335" r="9" fill="#F0D449"/><circle cx="330" cy="330" r="9" fill="#F0D449"/>
+      <circle cx="345" cy="390" r="9" fill="#F0D449"/><circle cx="295" cy="420" r="8" fill="#F0D449"/>
+      <circle cx="255" cy="400" r="9" fill="#F0D449"/>
+      <text x="300" y="450" font-size="12" fill="#F0D449" text-anchor="middle">Busca semantica</text>
+      <circle cx="600" cy="340" r="72" fill="#62CCA3" opacity="0.10"/>
+      <g stroke="#62CCA3" stroke-width="1.5" opacity="0.6">
         <line x1="600" y1="340" x2="560" y2="300"/><line x1="600" y1="340" x2="635" y2="295"/>
         <line x1="600" y1="340" x2="650" y2="345"/><line x1="600" y1="340" x2="615" y2="390"/>
         <line x1="600" y1="340" x2="565" y2="375"/>
       </g>
-      <circle cx="600" cy="340" r="20" fill="#A855F7"/>
+      <circle cx="600" cy="340" r="20" fill="#62CCA3"/>
       <text x="600" y="345" font-size="10.5" fill="#FFFFFF" text-anchor="middle">Gean</text>
-      <circle cx="560" cy="300" r="9" fill="#C084FC"/><circle cx="635" cy="295" r="9" fill="#C084FC"/>
-      <circle cx="650" cy="345" r="9" fill="#C084FC"/><circle cx="615" cy="390" r="9" fill="#C084FC"/>
-      <circle cx="565" cy="375" r="9" fill="#C084FC"/>
-      <text x="600" y="425" font-size="12" fill="#E9D5FF" text-anchor="middle">Difusao &amp; imagens</text>
-      <line x1="192" y1="188" x2="480" y2="105" stroke="#F8FAFC" stroke-width="1.3" stroke-dasharray="4 3" opacity="0.85"/>
-      <circle cx="480" cy="105" r="3" fill="#F8FAFC"/>
-      <rect x="478" y="18" width="306" height="158" rx="12" fill="#FFFFFF"/>
-      <rect x="478" y="18" width="306" height="158" rx="12" fill="none" stroke="#E2E8F0"/>
-      <rect x="498" y="36" width="26" height="26" rx="6" fill="#EEF2FF"/>
-      <text x="511" y="53" font-size="11" fill="#4F46E5" text-anchor="middle">FC</text>
-      <text x="534" y="47" font-size="13" font-weight="700" fill="#111827">Fairness em modelos de</text>
-      <text x="534" y="63" font-size="13" font-weight="700" fill="#111827">credito: um estudo de caso</text>
-      <text x="498" y="86" font-size="11" fill="#6B7280">Roberta V. · em submissao</text>
-      <line x1="498" y1="98" x2="764" y2="98" stroke="#E5E7EB"/>
-      <text x="498" y="116" font-size="10.5" fill="#374151">Resumo automatico: mede a</text>
-      <text x="498" y="132" font-size="10.5" fill="#374151">disparidade na taxa de inadimplencia</text>
-      <text x="498" y="148" font-size="10.5" fill="#374151">entre grupos e propoe recalibracao.</text>
-      <text x="498" y="167" font-size="11" font-weight="700" fill="#4F46E5">Abrir documento →</text>
-      <rect x="486" y="392" width="298" height="56" rx="10" fill="#111827" stroke="#334155"/>
-      <circle cx="504" cy="410" r="6" fill="#4F46E5"/>
-      <text x="518" y="414" font-size="10.5" fill="#CBD5E1">tema principal: clique para abrir</text>
-      <circle cx="504" cy="430" r="5" fill="#94A3B8"/>
-      <text x="518" y="434" font-size="10.5" fill="#CBD5E1">trabalho relacionado / atividade da rede</text>
+      <circle cx="560" cy="300" r="9" fill="#62CCA3"/><circle cx="635" cy="295" r="9" fill="#62CCA3"/>
+      <circle cx="650" cy="345" r="9" fill="#62CCA3"/><circle cx="615" cy="390" r="9" fill="#62CCA3"/>
+      <circle cx="565" cy="375" r="9" fill="#62CCA3"/>
+      <text x="600" y="425" font-size="12" fill="#62CCA3" text-anchor="middle">Difusao &amp; imagens</text>
+      <line x1="192" y1="188" x2="480" y2="105" stroke="#F0F0F0" stroke-width="1.3" stroke-dasharray="4 3" opacity="0.85"/>
+      <circle cx="480" cy="105" r="3" fill="#F0F0F0"/>
+      <rect x="478" y="18" width="306" height="158" rx="12" fill="#F0F0F0"/>
+      <rect x="478" y="18" width="306" height="158" rx="12" fill="none" stroke="#B4ADA4"/>
+      <rect x="498" y="36" width="26" height="26" rx="6" fill="#F0F0F0"/>
+      <text x="511" y="53" font-size="11" fill="#4392D2" text-anchor="middle">FC</text>
+      <text x="534" y="47" font-size="13" font-weight="700" fill="#1C2127">Fairness em modelos de</text>
+      <text x="534" y="63" font-size="13" font-weight="700" fill="#1C2127">credito: um estudo de caso</text>
+      <text x="498" y="86" font-size="11" fill="#5E5E5E">Roberta V. · em submissao</text>
+      <line x1="498" y1="98" x2="764" y2="98" stroke="#B4ADA4"/>
+      <text x="498" y="116" font-size="10.5" fill="#1C2127">Resumo automatico: mede a</text>
+      <text x="498" y="132" font-size="10.5" fill="#1C2127">disparidade na taxa de inadimplencia</text>
+      <text x="498" y="148" font-size="10.5" fill="#1C2127">entre grupos e propoe recalibracao.</text>
+      <text x="498" y="167" font-size="11" font-weight="700" fill="#4392D2">Abrir documento →</text>
+      <rect x="486" y="392" width="298" height="56" rx="10" fill="#1C2127" stroke="#5E5E5E"/>
+      <circle cx="504" cy="410" r="6" fill="#4392D2"/>
+      <text x="518" y="414" font-size="10.5" fill="#B4ADA4">tema principal: clique para abrir</text>
+      <circle cx="504" cy="430" r="5" fill="#5E5E5E"/>
+      <text x="518" y="434" font-size="10.5" fill="#B4ADA4">trabalho relacionado / atividade da rede</text>
     </svg>
   </div>
 </section>
 
-<div style="page-break-before: always;"></div>
 
 <section class="block">
   <h2>Privacidade e governança</h2>
   <p><strong>Hoje:</strong> o acesso ao site inteiro é controlado por uma única senha compartilhada (<code>SITE_PASSWORD</code>), comparada no servidor. Não existe conta por pessoa nem controle fino de quem pode editar o quê, além dessa senha, e não há histórico de versões.</p>
   <p><strong>Visão:</strong> documentos marcados como rascunho ficariam estritamente privados, nunca alimentando a nuvem de contexto nem treinando nenhum modelo. Apenas documentos em submissão ou já publicados entrariam nessa camada de visibilidade institucional, o suficiente para dar a gestores como Barros uma visão real do que está sendo produzido, sem expor o trabalho em progresso de ninguém. Esse desenho seguiria os princípios da LGPD.</p>
   <div class="mockup-figure" style="margin-top:14px">
-    <svg viewBox="0 0 800 190" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
-      <rect x="1" y="1" width="798" height="188" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
-      <rect x="30" y="20" width="220" height="112" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+    <svg viewBox="0 0 800 190" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, Arial, sans-serif">
+      <rect x="1" y="1" width="798" height="188" rx="12" fill="#FFFFFF" stroke="#B4ADA4"/>
+      <rect x="30" y="20" width="220" height="112" rx="10" fill="#FFFFFF" stroke="#B4ADA4" stroke-width="1.5"/>
       <rect x="30" y="20" width="220" height="4" rx="2" fill="#5E5E5E"/>
-      <circle cx="70" cy="60" r="20" fill="#E6E6E6"/>
-      <rect x="61" y="58" width="18" height="14" rx="3" fill="#34383E"/>
-      <path d="M 64 58 L 64 51 A 6 6 0 0 1 76 51 L 76 58" fill="none" stroke="#34383E" stroke-width="3"/>
-      <text x="100" y="56" font-size="13" font-weight="700" fill="#111827">Rascunho</text>
-      <text x="100" y="72" font-size="10" fill="#6B7280">100% privado</text>
-      <text x="46" y="106" font-size="10" fill="#6B7280">Nunca sai daqui.</text>
-      <text x="46" y="120" font-size="10" fill="#6B7280">Nunca treina nenhum modelo.</text>
+      <circle cx="70" cy="60" r="20" fill="#F0F0F0"/>
+      <rect x="61" y="58" width="18" height="14" rx="3" fill="#1C2127"/>
+      <path d="M 64 58 L 64 51 A 6 6 0 0 1 76 51 L 76 58" fill="none" stroke="#1C2127" stroke-width="3"/>
+      <text x="100" y="56" font-size="13" font-weight="700" fill="#1C2127">Rascunho</text>
+      <text x="100" y="72" font-size="10" fill="#5E5E5E">100% privado</text>
+      <text x="46" y="106" font-size="10" fill="#5E5E5E">Nunca sai daqui.</text>
+      <text x="46" y="120" font-size="10" fill="#5E5E5E">Nunca treina nenhum modelo.</text>
       <line x1="250" y1="76" x2="286" y2="76" stroke="#B4ADA4" stroke-width="2"/>
       <path d="M 280 70 L 288 76 L 280 82" fill="none" stroke="#B4ADA4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <rect x="290" y="20" width="220" height="112" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
-      <rect x="290" y="20" width="220" height="4" rx="2" fill="#FF931E"/>
-      <circle cx="330" cy="60" r="20" fill="#FEF3C7"/>
-      <ellipse cx="330" cy="60" rx="12" ry="7" fill="none" stroke="#7D470A" stroke-width="2.2"/>
-      <circle cx="330" cy="60" r="3.5" fill="#7D470A"/>
-      <text x="360" y="56" font-size="13" font-weight="700" fill="#111827">Em submissão</text>
-      <text x="360" y="72" font-size="10" fill="#6B7280">visível na rede</text>
-      <text x="306" y="106" font-size="10" fill="#6B7280">Entra na nuvem de contexto</text>
-      <text x="306" y="120" font-size="10" fill="#6B7280">para gestores e para busca.</text>
+      <rect x="290" y="20" width="220" height="112" rx="10" fill="#FFFFFF" stroke="#B4ADA4" stroke-width="1.5"/>
+      <rect x="290" y="20" width="220" height="4" rx="2" fill="#F04E44"/>
+      <circle cx="330" cy="60" r="20" fill="#F0F0F0"/>
+      <ellipse cx="330" cy="60" rx="12" ry="7" fill="none" stroke="#5E5E5E" stroke-width="2.2"/>
+      <circle cx="330" cy="60" r="3.5" fill="#5E5E5E"/>
+      <text x="360" y="56" font-size="13" font-weight="700" fill="#1C2127">Em submissão</text>
+      <text x="360" y="72" font-size="10" fill="#5E5E5E">visível na rede</text>
+      <text x="306" y="106" font-size="10" fill="#5E5E5E">Entra na nuvem de contexto</text>
+      <text x="306" y="120" font-size="10" fill="#5E5E5E">para gestores e para busca.</text>
       <line x1="510" y1="76" x2="546" y2="76" stroke="#B4ADA4" stroke-width="2"/>
       <path d="M 540 70 L 548 76 L 540 82" fill="none" stroke="#B4ADA4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <rect x="550" y="20" width="220" height="112" rx="10" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
-      <rect x="550" y="20" width="220" height="4" rx="2" fill="#246A3C"/>
-      <circle cx="590" cy="60" r="20" fill="#D1FAE5"/>
-      <ellipse cx="590" cy="60" rx="12" ry="7" fill="none" stroke="#065F46" stroke-width="2.2"/>
-      <circle cx="590" cy="60" r="3.5" fill="#065F46"/>
-      <text x="620" y="56" font-size="13" font-weight="700" fill="#111827">Publicado</text>
-      <text x="620" y="72" font-size="10" fill="#6B7280">visível na rede</text>
-      <text x="566" y="106" font-size="10" fill="#6B7280">Entra na nuvem de contexto,</text>
-      <text x="566" y="120" font-size="10" fill="#6B7280">igual ao em submissão.</text>
-      <text x="400" y="160" font-size="10.5" fill="#3A2FDF" text-anchor="middle" font-weight="700">Visão futura: só submissão e publicado alimentariam a nuvem de contexto</text>
-      <text x="400" y="176" font-size="9.5" fill="#9CA3AF" text-anchor="middle">Desenho pensado para ficar alinhado à LGPD</text>
+      <rect x="550" y="20" width="220" height="112" rx="10" fill="#FFFFFF" stroke="#B4ADA4" stroke-width="1.5"/>
+      <rect x="550" y="20" width="220" height="4" rx="2" fill="#1C2127"/>
+      <circle cx="590" cy="60" r="20" fill="#F0F0F0"/>
+      <ellipse cx="590" cy="60" rx="12" ry="7" fill="none" stroke="#1C2127" stroke-width="2.2"/>
+      <circle cx="590" cy="60" r="3.5" fill="#1C2127"/>
+      <text x="620" y="56" font-size="13" font-weight="700" fill="#1C2127">Publicado</text>
+      <text x="620" y="72" font-size="10" fill="#5E5E5E">visível na rede</text>
+      <text x="566" y="106" font-size="10" fill="#5E5E5E">Entra na nuvem de contexto,</text>
+      <text x="566" y="120" font-size="10" fill="#5E5E5E">igual ao em submissão.</text>
+      <text x="400" y="160" font-size="10.5" fill="#1C2127" text-anchor="middle" font-weight="700">Visão futura: só submissão e publicado alimentariam a nuvem de contexto</text>
+      <text x="400" y="176" font-size="9.5" fill="#5E5E5E" text-anchor="middle">Desenho pensado para ficar alinhado à LGPD</text>
     </svg>
   </div>
 </section>
@@ -389,78 +276,78 @@ footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-siz
   </ul>
 
   <div class="mockup-figure" style="margin-top:10px">
-    <svg viewBox="0 0 800 330" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
-      <rect x="1" y="1" width="798" height="328" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
+    <svg viewBox="0 0 800 330" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, Arial, sans-serif">
+      <rect x="1" y="1" width="798" height="328" rx="12" fill="#FFFFFF" stroke="#B4ADA4"/>
       <rect x="300" y="16" width="200" height="30" rx="15" fill="#1C2127"/>
       <text x="400" y="36" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle">100+ pesquisadores</text>
       <line x1="400" y1="46" x2="400" y2="64" stroke="#B4ADA4" stroke-width="2"/>
       <path d="M 394 58 L 400 66 L 406 58" fill="none" stroke="#B4ADA4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <rect x="270" y="66" width="260" height="34" rx="8" fill="#EEF2FF" stroke="#3A2FDF"/>
-      <text x="400" y="88" font-size="12" font-weight="700" fill="#3A2FDF" text-anchor="middle">Load balancer &middot; HTTPS</text>
+      <rect x="270" y="66" width="260" height="34" rx="8" fill="#F0F0F0" stroke="#1C2127"/>
+      <text x="400" y="88" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Load balancer &middot; HTTPS</text>
       <path d="M 330 100 L 175 128" stroke="#B4ADA4" stroke-width="1.6" fill="none"/>
       <path d="M 405 100 L 405 128" stroke="#B4ADA4" stroke-width="1.6" fill="none"/>
       <path d="M 470 100 L 645 128" stroke="#B4ADA4" stroke-width="1.6" fill="none"/>
-      <rect x="40" y="130" width="270" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
-      <rect x="40" y="130" width="270" height="4" fill="#0EA5E9"/>
-      <text x="175" y="151" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">LaTeX Live &middot; nó 1</text>
-      <text x="175" y="167" font-size="10" fill="#6B7280" text-anchor="middle">Express + Hocuspocus + Tectonic</text>
-      <text x="175" y="180" font-size="9" fill="#6B7280" text-anchor="middle">2 vCPU / 4GB</text>
-      <rect x="270" y="130" width="270" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
-      <rect x="270" y="130" width="270" height="4" fill="#0EA5E9"/>
-      <text x="405" y="151" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">LaTeX Live &middot; nó 2</text>
-      <text x="405" y="167" font-size="10" fill="#6B7280" text-anchor="middle">Express + Hocuspocus + Tectonic</text>
-      <text x="405" y="180" font-size="9" fill="#6B7280" text-anchor="middle">2 vCPU / 4GB</text>
-      <rect x="540" y="130" width="230" height="56" rx="8" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1.5"/>
+      <rect x="40" y="130" width="270" height="56" rx="8" fill="#FFFFFF" stroke="#B4ADA4" stroke-width="1.5"/>
+      <rect x="40" y="130" width="270" height="4" fill="#1C2127"/>
+      <text x="175" y="151" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">LaTeX Live &middot; nó 1</text>
+      <text x="175" y="167" font-size="10" fill="#5E5E5E" text-anchor="middle">Express + Hocuspocus + Tectonic</text>
+      <text x="175" y="180" font-size="9" fill="#5E5E5E" text-anchor="middle">2 vCPU / 4GB</text>
+      <rect x="270" y="130" width="270" height="56" rx="8" fill="#FFFFFF" stroke="#B4ADA4" stroke-width="1.5"/>
+      <rect x="270" y="130" width="270" height="4" fill="#1C2127"/>
+      <text x="405" y="151" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">LaTeX Live &middot; nó 2</text>
+      <text x="405" y="167" font-size="10" fill="#5E5E5E" text-anchor="middle">Express + Hocuspocus + Tectonic</text>
+      <text x="405" y="180" font-size="9" fill="#5E5E5E" text-anchor="middle">2 vCPU / 4GB</text>
+      <rect x="540" y="130" width="230" height="56" rx="8" fill="#FFFFFF" stroke="#B4ADA4" stroke-width="1.5"/>
       <rect x="540" y="130" width="230" height="4" fill="#F04E44"/>
-      <text x="655" y="155" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Redis</text>
-      <text x="655" y="171" font-size="10" fill="#6B7280" text-anchor="middle">sync do Hocuspocus entre nós</text>
+      <text x="655" y="155" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Redis</text>
+      <text x="655" y="171" font-size="10" fill="#5E5E5E" text-anchor="middle">sync do Hocuspocus entre nós</text>
       <line x1="175" y1="186" x2="175" y2="222" stroke="#B4ADA4" stroke-width="1.6"/>
       <line x1="405" y1="186" x2="405" y2="222" stroke="#B4ADA4" stroke-width="1.6"/>
       <line x1="655" y1="186" x2="655" y2="222" stroke="#B4ADA4" stroke-width="1.6"/>
-      <rect x="40" y="224" width="405" height="52" rx="8" fill="#F8FAFC" stroke="#E5E7EB" stroke-width="1.5"/>
-      <text x="242" y="245" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Storage compartilhado (NFS / EFS)</text>
-      <text x="242" y="261" font-size="10" fill="#6B7280" text-anchor="middle">projects/ visível igual em todos os nós</text>
-      <rect x="540" y="224" width="230" height="52" rx="8" fill="#F8FAFC" stroke="#E5E7EB" stroke-width="1.5"/>
-      <text x="655" y="245" font-size="12" font-weight="700" fill="#111827" text-anchor="middle">Tectonic cache</text>
-      <text x="655" y="261" font-size="10" fill="#6B7280" text-anchor="middle">pacotes LaTeX baixados sob demanda</text>
-      <line x1="40" y1="292" x2="770" y2="292" stroke="#D1D5DB" stroke-width="1" stroke-dasharray="3 3"/>
-      <text x="400" y="308" font-size="10" fill="#9CA3AF" text-anchor="middle">Único cenário aqui que exige mudança de código: os demais itens desta proposta são só infraestrutura</text>
+      <rect x="40" y="224" width="405" height="52" rx="8" fill="#F0F0F0" stroke="#B4ADA4" stroke-width="1.5"/>
+      <text x="242" y="245" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Storage compartilhado (NFS / EFS)</text>
+      <text x="242" y="261" font-size="10" fill="#5E5E5E" text-anchor="middle">projects/ visível igual em todos os nós</text>
+      <rect x="540" y="224" width="230" height="52" rx="8" fill="#F0F0F0" stroke="#B4ADA4" stroke-width="1.5"/>
+      <text x="655" y="245" font-size="12" font-weight="700" fill="#1C2127" text-anchor="middle">Tectonic cache</text>
+      <text x="655" y="261" font-size="10" fill="#5E5E5E" text-anchor="middle">pacotes LaTeX baixados sob demanda</text>
+      <line x1="40" y1="292" x2="770" y2="292" stroke="#B4ADA4" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="400" y="308" font-size="10" fill="#5E5E5E" text-anchor="middle">Único cenário aqui que exige mudança de código: os demais itens desta proposta são só infraestrutura</text>
     </svg>
   </div>
 
   <div class="mockup-figure" style="margin-top:16px">
-    <svg viewBox="0 0 800 240" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
-      <rect x="1" y="1" width="798" height="238" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
-      <line x1="230" y1="196" x2="760" y2="196" stroke="#D1D5DB" stroke-width="1"/>
-      <g stroke="#EEF0F3" stroke-width="1">
+    <svg viewBox="0 0 800 240" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, Arial, sans-serif">
+      <rect x="1" y="1" width="798" height="238" rx="12" fill="#FFFFFF" stroke="#B4ADA4"/>
+      <line x1="230" y1="196" x2="760" y2="196" stroke="#B4ADA4" stroke-width="1"/>
+      <g stroke="#B4ADA4" stroke-opacity=".4" stroke-width="1">
         <line x1="336" y1="40" x2="336" y2="196"/><line x1="442" y1="40" x2="442" y2="196"/>
         <line x1="548" y1="40" x2="548" y2="196"/><line x1="654" y1="40" x2="654" y2="196"/>
       </g>
-      <g font-size="9.5" fill="#9CA3AF">
+      <g font-size="9.5" fill="#5E5E5E">
         <text x="230" y="212" text-anchor="middle">R$0</text><text x="336" y="212" text-anchor="middle">R$1.500</text>
         <text x="442" y="212" text-anchor="middle">R$3.000</text><text x="548" y="212" text-anchor="middle">R$4.500</text>
         <text x="654" y="212" text-anchor="middle">R$6.000</text><text x="760" y="212" text-anchor="middle">R$7.500/mês</text>
       </g>
-      <text x="24" y="80" font-size="12" font-weight="700" fill="#111827">Overleaf hoje</text>
-      <text x="24" y="96" font-size="10" fill="#6B7280">100 pessoas, cada uma no seu plano</text>
-      <rect x="371" y="66" width="353" height="28" rx="14" fill="#E6E6E6"/>
+      <text x="24" y="80" font-size="12" font-weight="700" fill="#1C2127">Overleaf hoje</text>
+      <text x="24" y="96" font-size="10" fill="#5E5E5E">100 pessoas, cada uma no seu plano</text>
+      <rect x="371" y="66" width="353" height="28" rx="14" fill="#F0F0F0"/>
       <rect x="371" y="66" width="353" height="28" rx="14" fill="none" stroke="#B4ADA4"/>
       <circle cx="371" cy="80" r="6" fill="#5E5E5E"/><circle cx="724" cy="80" r="6" fill="#5E5E5E"/>
-      <text x="547" y="60" font-size="11" font-weight="700" fill="#34383E" text-anchor="middle">R$2.000 &#8211; R$7.000 / mês</text>
-      <text x="24" y="150" font-size="12" font-weight="700" fill="#111827">LaTeX Live &middot; próprio</text>
-      <text x="24" y="166" font-size="10" fill="#6B7280">vertical ou cluster, 100+ pessoas</text>
-      <rect x="265" y="136" width="85" height="28" rx="14" fill="#3A2FDF" fill-opacity="0.18"/>
-      <rect x="265" y="136" width="85" height="28" rx="14" fill="none" stroke="#3A2FDF"/>
-      <circle cx="265" cy="150" r="6" fill="#3A2FDF"/><circle cx="350" cy="150" r="6" fill="#3A2FDF"/>
-      <text x="307" y="130" font-size="11" font-weight="700" fill="#3A2FDF" text-anchor="middle">R$500 &#8211; R$1.700 / mês</text>
-      <text x="24" y="228" font-size="9.5" fill="#9CA3AF">Infraestrutura apenas; não considera mão de obra de manutenção</text>
+      <text x="547" y="60" font-size="11" font-weight="700" fill="#1C2127" text-anchor="middle">R$2.000 &#8211; R$7.000 / mês</text>
+      <text x="24" y="150" font-size="12" font-weight="700" fill="#1C2127">LaTeX Live &middot; próprio</text>
+      <text x="24" y="166" font-size="10" fill="#5E5E5E">vertical ou cluster, 100+ pessoas</text>
+      <rect x="265" y="136" width="85" height="28" rx="14" fill="#1C2127" fill-opacity="0.18"/>
+      <rect x="265" y="136" width="85" height="28" rx="14" fill="none" stroke="#1C2127"/>
+      <circle cx="265" cy="150" r="6" fill="#1C2127"/><circle cx="350" cy="150" r="6" fill="#1C2127"/>
+      <text x="307" y="130" font-size="11" font-weight="700" fill="#1C2127" text-anchor="middle">R$500 &#8211; R$1.700 / mês</text>
+      <text x="24" y="228" font-size="9.5" fill="#5E5E5E">Infraestrutura apenas; não considera mão de obra de manutenção</text>
     </svg>
   </div>
 
   <table class="kp-table">
     <tr><th>Item</th><th>Estimativa mensal (BRL)</th></tr>
-    <tr><td><strong>Tier 1 &middot; vertical</strong> &mdash; 1 nó, 8 vCPU / 16GB, disco persistente</td><td>R$500 &#8211; R$900</td></tr>
-    <tr><td><strong>Tier 2 &middot; cluster</strong> &mdash; 2+ nós (2 vCPU / 4GB cada) + load balancer</td><td>R$260 &#8211; R$500</td></tr>
+    <tr><td><strong>Tier 1 &middot; vertical</strong>: 1 nó, 8 vCPU / 16GB, disco persistente</td><td>R$500 &#8211; R$900</td></tr>
+    <tr><td><strong>Tier 2 &middot; cluster</strong>: 2+ nós (2 vCPU / 4GB cada) + load balancer</td><td>R$260 &#8211; R$500</td></tr>
     <tr><td>Redis (sync do Hocuspocus entre nós, só no Tier 2)</td><td>R$60 &#8211; R$90</td></tr>
     <tr><td>Storage compartilhado NFS/EFS (só no Tier 2)</td><td>R$80 &#8211; R$180</td></tr>
     <tr><td>Banda / transferência de dados</td><td>R$60 &#8211; R$120</td></tr>
@@ -479,8 +366,9 @@ footer.page-footer { padding: 18px 44px 30px; color: var(--text-faint); font-siz
 </main>
 
 <footer class="page-footer">
+  <img src="marca/instituto-positivo.svg" alt="Instituto Kunumi">
   <span>LaTeX Live &middot; proposta interna</span>
-  <span>Manuel Ferreira &middot; manuel@kunumi.com &middot; setembro de 2026</span>
+  <span>Manuel Ferreira &middot; manuel@kunumi.com &middot; setembro de 2026<em class="sic">sic parvis magna</em></span>
 </footer>
 
 </body>
